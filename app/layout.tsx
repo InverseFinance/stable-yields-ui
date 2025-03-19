@@ -49,18 +49,18 @@ export default function RootLayout({
           <main className="flex-1 flex flex-col gap-0 items-center justify-start" style={{ width: '100%', maxWidth: '1000px', margin: '0 auto' }}>
             {children}
           </main>
-          <footer className="py-6 flex gap-[24px] flex-wrap items-center justify-center">
+          <footer className="py-6 flex gap-2 flex-col items-center justify-center">
             <a
               href="https://inverse.finance/firm"
               target="_blank"
-              className="text-blue-400 underline"
+              className="text-gray-300/70 underline"
             >
               Built by Inverse Finance
             </a>
             <p
-              className="text-blue-400"
+              className="text-gray-300/70"
             >
-              Powered by on-chain data, project's APIs and Defillama
+              Sources: Ethereum chain, project APIs and DeFillama
             </p>
           </footer>
         </div>

@@ -2,7 +2,7 @@
 "use client"
 
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 
 const projectImages = {
@@ -51,6 +51,9 @@ export default function FuturisticTable({
   };
 }) {
   const [sortConfig, setSortConfig] = useState<any>({ key: "apy", direction: "desc" });
+  const [showModal, setShowModal] = useState(false);
+  const [pendingLink, setPendingLink] = useState<string | null>(null);
+
   const sortedData = [...data].sort((a, b) => {
     const aValue = a[sortConfig.key] ?? 0;
     const bValue = b[sortConfig.key] ?? 0;
@@ -67,7 +70,13 @@ export default function FuturisticTable({
   };
 
   const handleCta = (item: TableData) => {
-    window.open(item.link, '_blank');
+    setPendingLink(item.link);
+    setShowModal(true);
+  };
+
+  const handleDismiss = () => {
+    setShowModal(false);
+    setPendingLink(null);
   };
 
   return (
@@ -173,6 +182,46 @@ export default function FuturisticTable({
             })}</p>
         }
       </motion.div>
+
+      <AnimatePresence>
+        {showModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
+            onClick={handleDismiss}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-gray-900 p-6 rounded-xl shadow-xl border border-gray-800 max-w-md mx-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-xl font-bold text-white mb-4">External Link Disclaimer</h3>
+              <p className="text-gray-300 mb-6">
+                You are about to visit an external website. We are not affiliated with or responsible for the content on external sites and only provide a link for your convenience.
+              </p>
+              <div className="flex gap-4 justify-end">
+                <button
+                  onClick={handleDismiss}
+                  className="cursor-pointer px-4 py-2 text-gray-300 hover:text-white transition"
+                >
+                  Cancel
+                </button>
+                <a href={pendingLink} target="_blank" rel="noopener noreferrer">
+                  <button
+                    className="cursor-pointer px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
+                  >
+                    Continue
+                  </button>
+                </a>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
