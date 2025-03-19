@@ -26,10 +26,16 @@ const COLUMNS = [
         label: '90d Avg.',
     },
     {
-        key: 'type',
-        label: 'Type',
-        className: 'w-[200px]'
-    },
+        key: 'link',
+        label: '',
+        isCta: true,
+        ctaText: 'Supply',
+    }
+    // {
+    //     key: 'type',
+    //     label: 'Type',
+    //     className: 'w-[200px]'
+    // },
 ]
 
 export const YieldTable = ({

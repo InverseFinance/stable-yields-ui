@@ -55,7 +55,7 @@ export default function RootLayout({
               target="_blank"
               className="text-blue-400 underline"
             >
-              Courtesy of Inverse Finance
+              Built by Inverse Finance
             </a>
             <p
               className="text-blue-400"

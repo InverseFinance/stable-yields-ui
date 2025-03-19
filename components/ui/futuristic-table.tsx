@@ -66,6 +66,10 @@ export default function FuturisticTable({
     }));
   };
 
+  const handleCta = (item: TableData) => {
+    window.open(item.link, '_blank');
+  };
+
   return (
     <div className="w-full mt-10">
       <motion.div
@@ -124,24 +128,29 @@ export default function FuturisticTable({
                     {columns.map((column) => (
                       <td className={`p-3 font-extrabold text-xl ${item[column.key] === true || item[column.key] === 'fixed' ? 'text-green-400' : ''}`} key={column.key}>
                         {
-                          column.key === 'project' ?
-                            <a className="underline hover:text-blue-400 transition" href={item.link} target="_blank" rel="noopener noreferrer">
+                          column.isCta ? <button className="px-2 py-1 bg-blue-500 rounded-md cursor-pointer hover:text-blue-400 transition" onClick={() => handleCta(item)}>
+                            {column.ctaText}
+                          </button> :
+                            column.key === 'project' ?
+                              // <a className="underline hover:text-blue-400 transition" href={item.link} target="_blank" rel="noopener noreferrer">
                               <div className="flex items-center gap-2">
                                 <Image className="rounded-full" src={projectImages[item["project"]] || `https://icons.llamao.fi/icons/protocols/${item["project"].toLowerCase().replace(/ /g, '-')}?w=48&h=48`} alt={item['project']} width={30} height={30} />
                                 <span className="text-xl">{item["project"]}</span>
                               </div>
-                            </a> :
-                            ['symbol', 'borrowToken'].includes(column.key) ?
-                              <a className="underline hover:text-blue-400 transition" href={item.link} target="_blank" rel="noopener noreferrer">
+                              // </a>
+                              :
+                              ['symbol', 'borrowToken'].includes(column.key) ?
+                                // <a className="underline hover:text-blue-400 transition" href={item.link} target="_blank" rel="noopener noreferrer">
                                 <div className="flex items-center gap-2">
                                   <Image className="rounded-full" src={item["image"]} alt={item['symbol']} width={30} height={30} />
                                   <span className="text-xl">{item[column.key]}</span>
                                 </div>
-                              </a> :
-                              typeof item[column.key] === 'number' ? `${(item[column.key] as number).toFixed(2)}%`
-                                : typeof item[column.key] === 'string' ? item[column.key].replace('fixed', 'Fixed').replace('variable', 'Variable')
-                                  : typeof item[column.key] === 'boolean' ? item[column.key] ? 'Yes' : 'No'
-                                    : item[column.key]
+                                // </a> 
+                                :
+                                typeof item[column.key] === 'number' ? `${(item[column.key] as number).toFixed(2)}%`
+                                  : typeof item[column.key] === 'string' ? item[column.key].replace('fixed', 'Fixed').replace('variable', 'Variable')
+                                    : typeof item[column.key] === 'boolean' ? item[column.key] ? 'Yes' : 'No'
+                                      : item[column.key]
                         }
                       </td>
                     ))}
@@ -153,7 +162,7 @@ export default function FuturisticTable({
         </div>
         {
           timestamp && <p className="text-gray-400 text-sm mt-2">
-            Last updated: {new Date(timestamp).toLocaleString('en-US', { 
+            Last updated: {new Date(timestamp).toLocaleString('en-US', {
               year: 'numeric',
               month: 'long',
               day: 'numeric',
@@ -161,7 +170,7 @@ export default function FuturisticTable({
               minute: '2-digit',
               second: '2-digit',
               hour12: false,
-             })}</p>
+            })}</p>
         }
       </motion.div>
     </div>
