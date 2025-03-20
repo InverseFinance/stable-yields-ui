@@ -117,7 +117,7 @@ export default function FuturisticTable({
                     {columns.map((column) => (
                       <th
                         key={column.key}
-                        className="p-2 sm:p-3 text-sm sm:text-base lg:text-xl cursor-pointer hover:text-blue-400 transition whitespace-nowrap"
+                        className="min-w-[125px] p-2 sm:p-3 text-sm sm:text-base lg:text-xl cursor-pointer hover:text-blue-400 transition whitespace-nowrap"
                         onClick={() => handleSort(column.key)}
                       >
                         {column.label} {sortConfig.key === column.key && (sortConfig.direction === "asc" ? "▲" : "▼")}
@@ -136,7 +136,7 @@ export default function FuturisticTable({
                     >
                       {columns.map((column) => (
                         <td 
-                          className={`p-2 sm:p-3 text-sm sm:text-base lg:text-xl font-bold whitespace-nowrap ${
+                          className={`min-w-[125px] p-2 sm:p-3 text-sm sm:text-base lg:text-xl font-bold whitespace-nowrap ${
                             item[column.key] === true || item[column.key] === 'fixed' ? 'text-green-400' : ''
                           }`} 
                           key={column.key}
