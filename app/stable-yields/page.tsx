@@ -13,9 +13,9 @@ export default async function YieldsPage() {
           <h1 className="text-5xl sm:text-8xl lg:text-8xl font-bold text-gray-100 dark:text-blue-100 mb-2">
             Stable Yields
           </h1>
-          <p className="text-lg sm:text-xl lg:text-2xl text-gray-300 dark:text-gray-400">
+          <h2 className="text-lg sm:text-xl lg:text-2xl text-gray-300 dark:text-gray-400">
             Compare stablecoin yields across major DeFi protocols
-          </p>
+          </h2>
         </div>
       </header>
       <div className="flex flex-col gap-4 w-full items-center justify-center">
