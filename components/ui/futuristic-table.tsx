@@ -1,7 +1,7 @@
 // @ts-nocheck
 "use client"
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 
@@ -81,6 +81,22 @@ export default function FuturisticTable({
     setShowModal(false);
     setPendingLink(null);
   };
+
+  useEffect(() => {
+    const handleEscKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && showModal) {
+        handleDismiss();
+      }
+    };
+
+    if (showModal) {
+      window.addEventListener('keydown', handleEscKey);
+    }
+
+    return () => {
+      window.removeEventListener('keydown', handleEscKey);
+    };
+  }, [showModal]);
 
   return (
     <div className="w-full">
