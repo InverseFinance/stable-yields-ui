@@ -13,8 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Yield & Rate Comparator",
-  description: "Yield & Rate Comparator",
+  title: "Stable Yields",
+  description: "Stable Yields across major DeFi protocols",
+  keywords: ["Stable Yields", "Yield", "Stablecoins", "DeFi", "Yield-bearing stablecoins", "Stablecoin Yields", "DeFi Yields", "Yield Comparator", "Yield Table", "Yield Calculator", "Yield Rate", "Yield Rate Calculator", "Yield Rate Comparator", "Yield Rate Table", "Yield Rate Calculator", "Yield Rate Comparator", "Yield Rate Table"],
 };
 
 export default function RootLayout({
