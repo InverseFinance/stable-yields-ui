@@ -1,3 +1,4 @@
+import { YieldData } from "@/app/types";
 import FuturisticTable from "./ui/futuristic-table";
 
 const COLUMNS = [
@@ -42,15 +43,7 @@ export const YieldTable = ({
     data,
     timestamp,
 }: {
-    data: {
-        symbol: string;
-        image: string;
-        apy: number;
-        avg30d: number;
-        avg60d: number;
-        avg90d: number;
-        isVault: boolean;
-    }[];
+    data: YieldData[];
     timestamp: number;
 }) => {
     return <FuturisticTable
