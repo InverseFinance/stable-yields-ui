@@ -12,6 +12,7 @@ const projectImages = {
   'Silo': 'https://icons.llamao.fi/icons/protocols/silo?w=48&h=48',
   'Compound': 'https://icons.llamao.fi/icons/protocols/compound?w=48&h=48',
   'FiRM': 'https://icons.llamao.fi/icons/protocols/inverse-finance?w=48&h=48',
+  'Inverse': 'https://icons.llamao.fi/icons/protocols/inverse-finance?w=48&h=48',
   'Spark': 'https://icons.llamao.fi/icons/protocols/spark?w=48&h=48',
   'Fluid': 'https://icons.llamao.fi/icons/protocols/fluid?w=48&h=48',
   'Sky': 'https://coin-images.coingecko.com/coins/images/39925/large/sky.jpg?1724827980',

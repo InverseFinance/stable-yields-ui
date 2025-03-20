@@ -19,7 +19,7 @@ export default async function YieldsPage() {
         </div>
       </header>
       <div className="flex flex-col gap-4 w-full items-center justify-center">
-        <YieldTable data={json.rates} timestamp={json.timestamp} />
+        <YieldTable data={json.rates.map(r => ({ ...r, project: r.project.replace('FiRM', 'Inverse') }))} timestamp={json.timestamp} />
       </div>
     </>
   );
