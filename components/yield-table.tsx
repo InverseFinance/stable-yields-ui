@@ -53,5 +53,10 @@ export const YieldTable = ({
     }[];
     timestamp: number;
 }) => {
-    return <FuturisticTable data={data?.map(d => ({...d, type: d.isVault ? 'Tokenized Vault' : 'Lending'}))} columns={COLUMNS} timestamp={timestamp} />
+    return <FuturisticTable
+        scrollableBody={false}
+        data={data?.map(d => ({ ...d, type: d.isVault ? 'Tokenized Vault' : 'Lending' }))}
+        columns={COLUMNS}
+        timestamp={timestamp}
+    />
 }

@@ -130,7 +130,33 @@
 }
 
 .bg-futuristic {
-  background: linear-gradient(-45deg, #888889, #2e2e2e);
+  /* background: linear-gradient(-45deg, #888889, #2e2e2e); */
+  background: rgb(19, 19, 20);
   background-size: 100% 100%;
   animation: gradientAnimation 10s ease infinite;
+}
+
+.bg-container {
+  background: rgb(25, 25, 27);
+  border: 1px solid rgb(65, 68, 74);
+  border-radius: 12px;
+}
+
+.cta-button {
+  background: rgb(19, 19, 20);
+  border: 1px solid rgb(65, 68, 74);
+  border-radius: 12px;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.cta-button:hover {
+  color: lightblue;
+  background: rgb(25, 25, 27);
+  border: 1px solid rgb(65, 68, 74);
+}
+
+.table-border {
+  border-bottom: 1px solid rgb(65, 68, 74);
 }

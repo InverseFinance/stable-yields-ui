@@ -41,7 +41,8 @@ export default function FuturisticTable({
   timestamp,
   data,
   columns,
-  projectCollaterals
+  projectCollaterals,
+  scrollableBody = true
 }: {
   timestamp: number;
   data: TableData[];
@@ -49,6 +50,7 @@ export default function FuturisticTable({
   projectCollaterals?: {
     [key: string]: string[];
   };
+  scrollableBody?: boolean;
 }) {
   const [sortConfig, setSortConfig] = useState<any>({ key: "apy", direction: "desc" });
   const [showModal, setShowModal] = useState(false);
@@ -80,14 +82,14 @@ export default function FuturisticTable({
   };
 
   return (
-    <div className="w-full mt-10">
+    <div className="w-full">
       <motion.div
-        className="bg-gray-900/50 backdrop-blur-lg rounded-2xl p-4 shadow-xl border border-gray-800"
+        className="bg-container backdrop-blur-lg rounded-2xl p-4 shadow-xl"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <div className="relative max-h-[50vh] overflow-hidden">
+        <div className={`relative ${scrollableBody ? 'max-h-[50vh] overflow-hidden' : ''}`}>
           <table className="w-full text-left text-white table-fixed">
             <colgroup>
               {columns.map((column) => (
@@ -99,7 +101,7 @@ export default function FuturisticTable({
                 />
               ))}
             </colgroup>
-            <thead className="sticky top-0 bg-gray-900/50 backdrop-blur-lg z-10">
+            <thead className="sticky top-0 backdrop-blur-lg z-10">
               <tr className="text-gray-300">
                 {columns.map((column) => (
                   <th
@@ -113,7 +115,7 @@ export default function FuturisticTable({
               </tr>
             </thead>
           </table>
-          <div className="overflow-y-auto max-h-[50vh]">
+          <div className={`overflow-y-auto ${scrollableBody ? 'max-h-[50vh]' : ''}`}>
             <table className="w-full text-left text-white table-fixed">
               <colgroup>
                 {columns.map((column) => (
@@ -129,7 +131,7 @@ export default function FuturisticTable({
                 {sortedData.map((item, index) => (
                   <motion.tr
                     key={index}
-                    className="border-b border-gray-700 hover:bg-gray-800/50 transition"
+                    className="table-border hover:bg-gray-800/50 transition"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: index * 0.1 }}
@@ -137,7 +139,7 @@ export default function FuturisticTable({
                     {columns.map((column) => (
                       <td className={`p-3 font-extrabold text-xl ${item[column.key] === true || item[column.key] === 'fixed' ? 'text-green-400' : ''}`} key={column.key}>
                         {
-                          column.isCta ? <button className="px-2 py-1 bg-blue-500 rounded-md cursor-pointer hover:text-blue-400 transition" onClick={() => handleCta(item)}>
+                          column.isCta ? <button className="cta-button" onClick={() => handleCta(item)}>
                             {column.ctaText}
                           </button> :
                             column.key === 'project' ?
@@ -196,7 +198,7 @@ export default function FuturisticTable({
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-gray-900 p-6 rounded-xl shadow-xl border border-gray-800 max-w-md mx-4"
+              className="bg-container p-6 rounded-xl shadow-xl max-w-md mx-4"
               onClick={(e) => e.stopPropagation()}
             >
               <h3 className="text-xl font-bold text-white mb-4">External Link Disclaimer</h3>
@@ -212,7 +214,7 @@ export default function FuturisticTable({
                 </button>
                 <a href={pendingLink} target="_blank" rel="noopener noreferrer">
                   <button
-                    className="cursor-pointer px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
+                    className="cta-button cursor-pointer px-4 py-2 text-white"
                   >
                     Continue
                   </button>

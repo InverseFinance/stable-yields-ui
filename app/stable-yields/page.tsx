@@ -6,10 +6,10 @@ export default async function YieldsPage() {
   const json = await data.json();
   return (
     <>
-      <header className="flex-wrap items-center justify-center py-4">
+      <header className="flex-wrap items-center justify-center py-15">
         {/* <AppNav activeItem="/stable-yields" /> */}
-        <div className="text-center">
-          <h1 className="text-6xl font-extrabold text-gray-200 dark:text-blue-100 mb-2">
+        <div className="text-center gap-2">
+          <h1 className="text-6xl font-extrabold text-gray-200 dark:text-blue-100">
             Stable Yields
           </h1>
           <p className="text-xl font-bold text-gray-300/80 dark:text-gray-400">
@@ -17,7 +17,7 @@ export default async function YieldsPage() {
           </p>
         </div>
       </header>
-      <div className="flex flex-col gap-4 w-full items-center justify-center">
+      <div className="flex flex-col gap-4 w-full">
         <YieldTable data={json.rates} timestamp={json.timestamp} />
       </div>
     </>
