@@ -4,6 +4,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
+import { gaEvent } from "@/lib/utils";
 
 const projectImages = {
   'Frax': 'https://icons.llamao.fi/icons/protocols/frax?w=48&h=48',
@@ -55,7 +56,7 @@ export default function FuturisticTable({
 }) {
   const [sortConfig, setSortConfig] = useState<any>({ key: "apy", direction: "desc" });
   const [showModal, setShowModal] = useState(false);
-  const [pendingLink, setPendingLink] = useState<string | null>(null);
+  const [pendingItem, setPendingItem] = useState<TableData | null>(null);
 
   const sortedData = [...data].sort((a, b) => {
     const aValue = a[sortConfig.key] ?? 0;
@@ -73,13 +74,14 @@ export default function FuturisticTable({
   };
 
   const handleCta = (item: TableData) => {
-    setPendingLink(item.link);
+    gaEvent({ action: 'supply_cta', params: { stable: item.symbol, project: item.project, key: `${item.symbol}_${item.project}`, apy: item.apy } });
+    setPendingItem(item);
     setShowModal(true);
   };
 
   const handleDismiss = () => {
     setShowModal(false);
-    setPendingLink(null);
+    setPendingItem(null);
   };
 
   useEffect(() => {
@@ -225,8 +227,9 @@ export default function FuturisticTable({
                 >
                   Cancel
                 </button>
-                <a href={pendingLink} target="_blank" rel="noopener noreferrer">
+                <a href={pendingItem?.link} target="_blank" rel="noopener noreferrer">
                   <button
+                    onClick={() => gaEvent({ action: 'continue_cta', params: { stable: pendingItem?.symbol, project: pendingItem?.project, key: `${pendingItem?.symbol}_${pendingItem?.project}`, apy: pendingItem?.apy } })}
                     className="cta-button cursor-pointer px-3 sm:px-4 py-2 text-sm sm:text-base text-white"
                   >
                     Continue
