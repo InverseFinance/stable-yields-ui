@@ -14,6 +14,9 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Stable Yields",
+  applicationName: "Stable Yields",
+  icons: "/logo.webp",
+  authors: [{ name: "Inverse Finance", url: "https://inverse.finance" }],
   description: "Stable Yields across major DeFi protocols",
   keywords: ["Stable Yields", "Yield", "Stablecoins", "DeFi", "Yield-bearing stablecoins", "Stablecoin Yields", "DeFi Yields", "Yield Comparator", "Yield Table", "Yield Calculator", "Yield Rate", "Yield Rate Calculator", "Yield Rate Comparator", "Yield Rate Table", "Yield Rate Calculator", "Yield Rate Comparator", "Yield Rate Table"],
 };
@@ -52,7 +55,7 @@ export default function RootLayout({
           </main>
           <footer className="py-6 flex gap-2 flex-col items-center justify-center">
             <a
-              href="https://inverse.finance/firm"
+              href="https://inverse.finance"
               target="_blank"
               className="text-gray-300/70 underline"
             >
