@@ -85,95 +85,90 @@ export default function FuturisticTable({
   return (
     <div className="w-full">
       <motion.div
-        className="bg-container backdrop-blur-lg rounded-2xl p-4 shadow-xl"
+        className="bg-container backdrop-blur-lg rounded-2xl p-2 sm:p-4 shadow-xl"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <div className={`relative ${scrollableBody ? 'max-h-[50vh] overflow-hidden' : ''}`}>
-          <table className="w-full text-left text-white table-fixed">
-            <colgroup>
-              {columns.map((column) => (
-                <col
-                  key={column.key}
-                  className={
-                    column.className + ' w-min-[150px]'
-                  }
-                />
-              ))}
-            </colgroup>
-            <thead className="sticky top-0 backdrop-blur-lg z-10">
-              <tr className="text-gray-300">
-                {columns.map((column) => (
-                  <th
-                    key={column.key}
-                    className="p-3 text-xl cursor-pointer hover:text-blue-400 transition"
-                    onClick={() => handleSort(column.key)}
-                  >
-                    {column.label} {sortConfig.key === column.key && (sortConfig.direction === "asc" ? "▲" : "▼")}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-          </table>
-          <div className={`overflow-y-auto ${scrollableBody ? 'max-h-[50vh]' : ''}`}>
-            <table className="w-full text-left text-white table-fixed">
-              <colgroup>
-                {columns.map((column) => (
-                  <col
-                    key={column.key}
-                    className={
-                      column.className + ' w-min-[150px]'
-                    }
-                  />
-                ))}
-              </colgroup>
-              <tbody>
-                {sortedData.map((item, index) => (
-                  <motion.tr
-                    key={index}
-                    className="table-border hover:bg-gray-800/50 transition"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: index * 0.1 }}
-                  >
+        <div className="relative">
+          <div className="overflow-x-auto">
+            <div className={`${scrollableBody ? 'max-h-[60vh]' : ''} overflow-y-auto`}>
+              <table className="w-full text-left text-white min-w-[800px]">
+                <thead className="sticky top-0 backdrop-blur-lg z-10">
+                  <tr className="text-gray-300">
                     {columns.map((column) => (
-                      <td className={`p-3 font-extrabold text-xl ${item[column.key] === true || item[column.key] === 'fixed' ? 'text-green-400' : ''}`} key={column.key}>
-                        {
-                          column.isCta ? <button className="cta-button" onClick={() => handleCta(item)}>
-                            {column.ctaText}
-                          </button> :
-                            column.key === 'project' ?
-                              // <a className="underline hover:text-blue-400 transition" href={item.link} target="_blank" rel="noopener noreferrer">
-                              <div className="flex items-center gap-2">
-                                <Image className="rounded-full" src={projectImages[item["project"]] || `https://icons.llamao.fi/icons/protocols/${item["project"].toLowerCase().replace(/ /g, '-')}?w=48&h=48`} alt={item['project']} width={30} height={30} />
-                                <span className="text-xl">{item["project"]}</span>
-                              </div>
-                              // </a>
-                              :
-                              ['symbol', 'borrowToken'].includes(column.key) ?
-                                // <a className="underline hover:text-blue-400 transition" href={item.link} target="_blank" rel="noopener noreferrer">
-                                <div className="flex items-center gap-2">
-                                  <Image className="rounded-full" src={item["image"]} alt={item['symbol']} width={30} height={30} />
-                                  <span className="text-xl">{item[column.key]}</span>
-                                </div>
-                                // </a> 
-                                :
-                                typeof item[column.key] === 'number' ? `${(item[column.key] as number).toFixed(2)}%`
-                                  : typeof item[column.key] === 'string' ? item[column.key].replace('fixed', 'Fixed').replace('variable', 'Variable')
-                                    : typeof item[column.key] === 'boolean' ? item[column.key] ? 'Yes' : 'No'
-                                      : item[column.key]
-                        }
-                      </td>
+                      <th
+                        key={column.key}
+                        className="p-2 sm:p-3 text-sm sm:text-base lg:text-xl cursor-pointer hover:text-blue-400 transition whitespace-nowrap"
+                        onClick={() => handleSort(column.key)}
+                      >
+                        {column.label} {sortConfig.key === column.key && (sortConfig.direction === "asc" ? "▲" : "▼")}
+                      </th>
                     ))}
-                  </motion.tr>
-                ))}
-              </tbody>
-            </table>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedData.map((item, index) => (
+                    <motion.tr
+                      key={index}
+                      className="table-border hover:bg-gray-800/50 transition"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: index * 0.1 }}
+                    >
+                      {columns.map((column) => (
+                        <td 
+                          className={`p-2 sm:p-3 text-sm sm:text-base lg:text-xl font-bold whitespace-nowrap ${
+                            item[column.key] === true || item[column.key] === 'fixed' ? 'text-green-400' : ''
+                          }`} 
+                          key={column.key}
+                        >
+                          {
+                            column.isCta ? (
+                              <button className="cta-button text-sm sm:text-base" onClick={() => handleCta(item)}>
+                                {column.ctaText}
+                              </button>
+                            ) : column.key === 'project' ? (
+                              <div className="flex items-center gap-2">
+                                <Image 
+                                  className="rounded-full w-6 h-6 sm:w-8 sm:h-8" 
+                                  src={projectImages[item["project"]] || `https://icons.llamao.fi/icons/protocols/${item["project"].toLowerCase().replace(/ /g, '-')}?w=48&h=48`} 
+                                  alt={item['project']} 
+                                  width={30} 
+                                  height={30} 
+                                />
+                                <span>{item["project"]}</span>
+                              </div>
+                            ) : ['symbol', 'borrowToken'].includes(column.key) ? (
+                              <div className="flex items-center gap-2">
+                                <Image 
+                                  className="rounded-full w-6 h-6 sm:w-8 sm:h-8" 
+                                  src={item["image"]} 
+                                  alt={item['symbol']} 
+                                  width={30} 
+                                  height={30} 
+                                />
+                                <span>{item[column.key]}</span>
+                              </div>
+                            ) : typeof item[column.key] === 'number' ? 
+                                `${(item[column.key] as number).toFixed(2)}%` :
+                              typeof item[column.key] === 'string' ? 
+                                item[column.key].replace('fixed', 'Fixed').replace('variable', 'Variable') :
+                              typeof item[column.key] === 'boolean' ? 
+                                item[column.key] ? 'Yes' : 'No' :
+                                item[column.key]
+                          }
+                        </td>
+                      ))}
+                    </motion.tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
-        {
-          timestamp && <p className="text-gray-400 text-sm mt-2">
+        {timestamp && (
+          <p className="text-gray-400 text-xs sm:text-sm mt-2">
             Last updated: {new Date(timestamp).toLocaleString('en-US', {
               year: 'numeric',
               month: 'long',
@@ -182,8 +177,9 @@ export default function FuturisticTable({
               minute: '2-digit',
               second: '2-digit',
               hour12: false,
-            })}</p>
-        }
+            })}
+          </p>
+        )}
       </motion.div>
 
       <AnimatePresence>
@@ -199,23 +195,23 @@ export default function FuturisticTable({
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-container p-6 rounded-xl shadow-xl max-w-md mx-4"
+              className="bg-container p-4 sm:p-6 rounded-xl shadow-xl max-w-md mx-4"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-xl font-bold text-white mb-4">External Link Disclaimer</h3>
-              <p className="text-gray-300 mb-6">
+              <h3 className="text-lg sm:text-xl font-bold text-white mb-4">External Link Disclaimer</h3>
+              <p className="text-sm sm:text-base text-gray-300 mb-6">
                 You are about to visit an external website. We are not affiliated with or responsible for the content on external sites and only provide a link for your convenience.
               </p>
               <div className="flex gap-4 justify-end">
                 <button
                   onClick={handleDismiss}
-                  className="cursor-pointer px-4 py-2 text-gray-300 hover:text-white transition"
+                  className="cursor-pointer px-3 sm:px-4 py-2 text-sm sm:text-base text-gray-300 hover:text-white transition"
                 >
                   Cancel
                 </button>
                 <a href={pendingLink} target="_blank" rel="noopener noreferrer">
                   <button
-                    className="cta-button cursor-pointer px-4 py-2 text-white"
+                    className="cta-button cursor-pointer px-3 sm:px-4 py-2 text-sm sm:text-base text-white"
                   >
                     Continue
                   </button>
