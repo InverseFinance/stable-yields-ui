@@ -74,7 +74,7 @@ export default function FuturisticTable({
   };
 
   const handleCta = (item: TableData) => {
-    gaEvent({ action: 'supply_cta', params: { stable: item.symbol, project: item.project, key: `${item.symbol}_${item.project}`, apy: item.apy } });
+    gaEvent({ action: `supply-${item.project}-${item.symbol}`, params: { stable: item.symbol, project: item.project, key: `${item.symbol}_${item.project}`, apy: item.apy } });
     setPendingItem(item);
     setShowModal(true);
   };
@@ -229,7 +229,7 @@ export default function FuturisticTable({
                 </button>
                 <a href={pendingItem?.link} target="_blank" rel="noopener noreferrer">
                   <button
-                    onClick={() => gaEvent({ action: 'continue_cta', params: { stable: pendingItem?.symbol, project: pendingItem?.project, key: `${pendingItem?.symbol}_${pendingItem?.project}`, apy: pendingItem?.apy } })}
+                    onClick={() => gaEvent({ action: `continue-${pendingItem?.project}-${pendingItem?.symbol}`, params: { stable: pendingItem?.symbol, project: pendingItem?.project, key: `${pendingItem?.symbol}_${pendingItem?.project}`, apy: pendingItem?.apy } })}
                     className="cta-button cursor-pointer px-3 sm:px-4 py-2 text-sm sm:text-base text-white"
                   >
                     Continue
