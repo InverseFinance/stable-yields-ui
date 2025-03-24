@@ -136,7 +136,7 @@ export default function FuturisticTable({
                     >
                       {columns.map((column) => (
                         <td 
-                          className={`min-w-[125px] p-2 sm:p-3 text-sm sm:text-base lg:text-xl font-bold whitespace-nowrap ${
+                          className={`min-w-[125px] p-2 sm:p-3 text-primary-foreground text-sm sm:text-base lg:text-xl font-bold whitespace-nowrap ${
                             item[column.key] === true || item[column.key] === 'fixed' ? 'text-green-400' : ''
                           }`} 
                           key={column.key}
