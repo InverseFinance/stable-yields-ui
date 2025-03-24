@@ -111,13 +111,13 @@ export default function FuturisticTable({
         <div className="relative">
           <div className="overflow-x-auto">
             <div className={`${scrollableBody ? 'max-h-[60vh]' : ''} overflow-y-auto`}>
-              <table className="w-full text-left text-white min-w-[800px]">
+              <table className="w-full text-left text-foreground min-w-[800px]">
                 <thead className="sticky top-0 backdrop-blur-lg z-10">
-                  <tr className="text-gray-300">
+                  <tr className="text-muted-foreground">
                     {columns.map((column) => (
                       <th
                         key={column.key}
-                        className="min-w-[125px] p-2 sm:p-3 text-sm sm:text-base lg:text-xl cursor-pointer hover:text-blue-400 transition whitespace-nowrap"
+                        className="min-w-[125px] p-2 sm:p-3 text-sm sm:text-base lg:text-xl cursor-pointer hover:text-primary transition whitespace-nowrap"
                         onClick={() => handleSort(column.key)}
                       >
                         {column.label} {sortConfig.key === column.key && (sortConfig.direction === "asc" ? "▲" : "▼")}
@@ -129,7 +129,7 @@ export default function FuturisticTable({
                   {sortedData.map((item, index) => (
                     <motion.tr
                       key={index}
-                      className="table-border hover:bg-gray-800/50 transition"
+                      className="table-border hover:bg-muted/50 transition"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: index * 0.1 }}
@@ -186,7 +186,7 @@ export default function FuturisticTable({
           </div>
         </div>
         {timestamp && (
-          <p className="text-gray-400 text-xs sm:text-sm mt-2">
+          <p className="text-muted-foreground text-xs sm:text-sm mt-2">
             Last updated: {new Date(timestamp).toLocaleString('en-US', {
               year: 'numeric',
               month: 'long',
@@ -206,7 +206,7 @@ export default function FuturisticTable({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
+            className="fixed inset-0 bg-background/50 backdrop-blur-sm flex items-center justify-center z-50"
             onClick={handleDismiss}
           >
             <motion.div
@@ -216,21 +216,21 @@ export default function FuturisticTable({
               className="bg-container p-4 sm:p-6 rounded-xl shadow-xl max-w-md mx-4"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-lg sm:text-xl font-bold text-white mb-4">External Link Disclaimer</h3>
-              <p className="text-sm sm:text-base text-gray-300 mb-6">
+              <h3 className="text-lg sm:text-xl font-bold text-foreground mb-4">External Link Disclaimer</h3>
+              <p className="text-sm sm:text-base text-muted-foreground mb-6">
                 You are about to visit an external website. We are not affiliated with or responsible for the content on external sites and only provide a link for your convenience.
               </p>
               <div className="flex gap-4 justify-end">
                 <button
                   onClick={handleDismiss}
-                  className="cursor-pointer px-3 sm:px-4 py-2 text-sm sm:text-base text-gray-300 hover:text-white transition"
+                  className="cursor-pointer px-3 sm:px-4 py-2 text-sm sm:text-base text-muted-foreground hover:text-foreground transition"
                 >
                   Cancel
                 </button>
                 <a href={pendingItem?.link} target="_blank" rel="noopener noreferrer">
                   <button
                     onClick={() => gaEvent({ action: `continue-${pendingItem?.project}-${pendingItem?.symbol}`, params: { stable: pendingItem?.symbol, project: pendingItem?.project, key: `${pendingItem?.symbol}_${pendingItem?.project}`, apy: pendingItem?.apy } })}
-                    className="cta-button cursor-pointer px-3 sm:px-4 py-2 text-sm sm:text-base text-white"
+                    className="cta-button cursor-pointer px-3 sm:px-4 py-2 text-sm sm:text-base text-foreground"
                   >
                     Continue
                   </button>
