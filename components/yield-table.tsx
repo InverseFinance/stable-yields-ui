@@ -55,7 +55,7 @@ export const YieldTable = ({
     timestamp: number;
 }) => {
     return (
-        <div className="flex flex-col gap-6 w-full">
+        <div className="flex flex-col gap-8 w-full">
             <FuturisticTable
                 scrollableBody={false}
                 data={data?.map(d => ({ ...d, type: d.isVault ? 'Tokenized Vault' : 'Lending' }))}

@@ -21,12 +21,28 @@ const CHART_COLORS = [
     'gold',
     'blue',
     'teal',
-    'silver',
-    'orange',
+    'skyblue',
+    'brown',
     'green',
-    'lightblue',
+    'darkblue',
     'darkgreen',
 ];
+
+const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const day = date.getDate();
+    if (day !== 1 && day !== 15) return '';
+    return new Date(dateStr).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric'
+    });
+};
+
+interface ChartDataPoint {
+    timestamp: string;
+    apy: number;
+    tvlUsd: number;
+}
 
 export default function FuturisticChart({ data }: { data: YieldData[] }) {
     const { theme } = useTheme();
@@ -34,7 +50,7 @@ export default function FuturisticChart({ data }: { data: YieldData[] }) {
     const isDark = theme === 'dark';
 
     const itemsWithChartData = useMemo(() => {
-        return data.filter(item => item.data && item.data.length > 0);
+        return data.filter(item => item.chartData && item.chartData.length > 0);
     }, [data]);
 
     const processedData = useMemo(() => {
@@ -42,7 +58,7 @@ export default function FuturisticChart({ data }: { data: YieldData[] }) {
 
         const allTimestamps = new Set<string>();
         itemsWithChartData.forEach(item => {
-            item.data?.forEach(point => {
+            item.chartData?.forEach((point: ChartDataPoint) => {
                 allTimestamps.add(point.timestamp);
             });
         });
@@ -52,7 +68,7 @@ export default function FuturisticChart({ data }: { data: YieldData[] }) {
             const day = timestamp.substring(0, 10);
             const point: any = { timestamp: day };
             itemsWithChartData.forEach((item) => {
-                const dataPoint = item.data?.find(d => d.timestamp.substring(0, 10) === day);
+                const dataPoint = item.chartData?.find((d: ChartDataPoint) => d.timestamp.substring(0, 10) === day);
                 if (dataPoint) {
                     point[`${item.symbol}_apy`] = dataPoint.apy;
                     point[`${item.symbol}_tvl`] = dataPoint.tvlUsd;
@@ -72,7 +88,13 @@ export default function FuturisticChart({ data }: { data: YieldData[] }) {
 
         return (
             <div className="bg-card border border-border rounded-lg p-3 shadow-lg backdrop-blur-sm">
-                <p className="text-muted-foreground text-sm mb-2">{label}</p>
+                <p className="text-muted-foreground text-sm mb-2">
+                    {new Date(label).toLocaleDateString('en-US', {
+                        month: 'long',
+                        day: 'numeric',
+                        year: 'numeric'
+                    })}
+                </p>
                 {payload.map((entry: any, index: number) => {
                     const [symbol] = entry.dataKey.split('_');
                     const value = activeMetric === 'apy'
@@ -97,16 +119,16 @@ export default function FuturisticChart({ data }: { data: YieldData[] }) {
 
     return (
         <motion.div
-            className="w-full bg-container backdrop-blur-lg rounded-2xl p-4 sm:p-6"
+            className="bg-container backdrop-blur-lg rounded-2xl p-2 sm:p-4 shadow-xl"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
         >
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                 <h3 className="text-lg sm:text-xl font-bold text-foreground">
-                    90d Historical {activeMetric.toUpperCase()} Evolution
+                    90d Historical {activeMetric.toUpperCase()} Evolution for the current Top 5
                 </h3>
-                <div className="flex gap-2">
+                {/* <div className="flex gap-2">
                     <button
                         onClick={() => setActiveMetric('apy')}
                         className={`px-4 py-2 cursor-pointer rounded-lg text-sm font-medium transition-colors ${activeMetric === 'apy'
@@ -125,7 +147,7 @@ export default function FuturisticChart({ data }: { data: YieldData[] }) {
                     >
                         TVL
                     </button>
-                </div>
+                </div> */}
             </div>
 
             <div className="w-full h-[400px]">
@@ -166,6 +188,11 @@ export default function FuturisticChart({ data }: { data: YieldData[] }) {
                             tick={{ fill: isDark ? '#999' : '#666' }}
                             tickLine={{ stroke: isDark ? '#999' : '#666' }}
                             axisLine={{ stroke: isDark ? '#999' : '#666' }}
+                            tickFormatter={formatDate}
+                            interval={5}
+                            // angle={-45}
+                            textAnchor="end"
+                        // height={50}
                         />
 
                         <YAxis
@@ -190,6 +217,7 @@ export default function FuturisticChart({ data }: { data: YieldData[] }) {
                                 name={item.symbol}
                                 stroke={CHART_COLORS[index % CHART_COLORS.length]}
                                 fill={`url(#gradient-${item.symbol})`}
+                                // fill={`#00000000`}
                                 strokeWidth={2}
                                 dot={false}
                                 activeDot={{
@@ -202,6 +230,9 @@ export default function FuturisticChart({ data }: { data: YieldData[] }) {
                         ))}
                     </ComposedChart>
                 </ResponsiveContainer>
+                {/* <p className="text-muted-foreground text-xs sm:text-sm mb-4">
+                    Chart data from Defillama
+                </p> */}
             </div>
         </motion.div>
     );
