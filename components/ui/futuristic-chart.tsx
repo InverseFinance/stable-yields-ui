@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import {
     ResponsiveContainer,
@@ -17,15 +17,6 @@ import { motion } from 'framer-motion';
 import { smartShortNumber } from '@/lib/utils';
 import { ChartData } from '@/app/types';
 
-// const CHART_COLORS = [
-//     'var(--primary)',
-//     'var(--chart-1)',
-//     'var(--chart-2)',
-//     'var(--chart-3)',
-//     'var(--chart-4)',
-//     'var(--chart-5)',
-//     // 'var(--chart-6)',
-// ];
 const CHART_COLORS = [
     'orange',
     'purple',
@@ -46,7 +37,7 @@ const formatDate = (dateStr: string) => {
 
 const formatTs = (ts: number) => {
     const date = new Date(ts);
-    const day = date.getDate();
+    // const day = date.getDate();
     // if (day !== 1 && day !== 15) return '';
     return date.toLocaleDateString('en-US', {
         month: 'short',
@@ -65,6 +56,23 @@ export default function FuturisticChart({ data }: { data: ChartData[] }) {
     const { theme } = useTheme();
     const [activeMetric, setActiveMetric] = useState<'apy' | 'tvl'>('apy');
     const isDark = theme === 'dark';
+
+    const [visibleSeries, setVisibleSeries] = useState<{ [key: string]: boolean }>({});
+
+    useEffect(() => {
+        const initialVisibility = data.reduce((acc, item) => {
+            acc[item.symbol] = true;
+            return acc;
+        }, {} as { [key: string]: boolean });
+        setVisibleSeries(initialVisibility);
+    }, [data]);
+
+    const handleLegendClick = (entry: any) => {
+        setVisibleSeries(prev => ({
+            ...prev,
+            [entry.value]: !prev[entry.value]
+        }));
+    };
 
     // Zoom state
     const [zoomState, setZoomState] = useState<{
@@ -307,7 +315,15 @@ export default function FuturisticChart({ data }: { data: ChartData[] }) {
                         />
 
                         <Tooltip content={<CustomTooltip />} />
-                        <Legend style={{ userSelect: 'none' }} />
+                        <Legend 
+                            style={{ userSelect: 'none' }} 
+                            onClick={handleLegendClick}
+                            formatter={(value, entry) => (
+                                <span style={{ cursor: 'pointer', textDecoration: visibleSeries[value] ? 'none' : 'line-through' }}>
+                                    {value}
+                                </span>
+                            )}
+                        />
 
                         {itemsWithChartData.map((item, index) => (
                             <Area
@@ -318,6 +334,7 @@ export default function FuturisticChart({ data }: { data: ChartData[] }) {
                                 stroke={CHART_COLORS[index % CHART_COLORS.length]}
                                 fill={`url(#gradient-${item.symbol})`}
                                 strokeWidth={2}
+                                opacity={visibleSeries[item.symbol] ? 1 : 0}
                                 dot={false}
                                 activeDot={{
                                     r: 6,
