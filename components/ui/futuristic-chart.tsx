@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useTheme } from 'next-themes';
 import {
     ResponsiveContainer,
@@ -11,20 +11,27 @@ import {
     Tooltip,
     Legend,
     CartesianGrid,
+    ReferenceArea,
 } from 'recharts';
 import { motion } from 'framer-motion';
 import { smartShortNumber } from '@/lib/utils';
 import { ChartData } from '@/app/types';
 
+// const CHART_COLORS = [
+//     'var(--primary)',
+//     'var(--chart-1)',
+//     'var(--chart-2)',
+//     'var(--chart-3)',
+//     'var(--chart-4)',
+//     'var(--chart-5)',
+//     // 'var(--chart-6)',
+// ];
 const CHART_COLORS = [
-    'gold',
-    'blue',
-    'teal',
+    'orange',
+    'purple',
+    'green',
     'skyblue',
     'brown',
-    'green',
-    'darkblue',
-    'darkgreen',
 ];
 
 const formatDate = (dateStr: string) => {
@@ -48,16 +55,35 @@ const formatTs = (ts: number) => {
 };
 
 interface ChartDataPoint {
-    timestamp: string;
+    day: string;
     ts: number;
     apy: number;
     tvlUsd: number;
 }
 
-export default function FuturisticChart({ data, allowZoom = true }: { data: ChartData[] }) {
+export default function FuturisticChart({ data }: { data: ChartData[] }) {
     const { theme } = useTheme();
     const [activeMetric, setActiveMetric] = useState<'apy' | 'tvl'>('apy');
     const isDark = theme === 'dark';
+
+    // Zoom state
+    const [zoomState, setZoomState] = useState<{
+        refAreaLeft: string;
+        refAreaRight: string;
+        left: string | number;
+        right: string | number;
+        top: string;
+        bottom: string;
+        animation: boolean;
+    }>({
+        refAreaLeft: '',
+        refAreaRight: '',
+        left: 'dataMin',
+        right: 'dataMax',
+        animation: true,
+        top: 'auto',
+        bottom: 'auto',
+    });
 
     const itemsWithChartData = useMemo(() => {
         return data.filter(item => item.chartData && item.chartData.length > 0);
@@ -66,19 +92,18 @@ export default function FuturisticChart({ data, allowZoom = true }: { data: Char
     const processedData = useMemo(() => {
         if (itemsWithChartData.length === 0) return [];
 
-        const allTimestamps = new Set<string>();
+        const allDays = new Set<string>();
         itemsWithChartData.forEach(item => {
-            item.chartData?.forEach((point: ChartDataPoint) => {
-                allTimestamps.add(point.timestamp);
+            item.chartData?.forEach(point => {
+                allDays.add(point.day);
             });
         });
 
-        const sortedTimestamps = Array.from(allTimestamps).sort();
-        return sortedTimestamps.map(timestamp => {
-            const day = timestamp.substring(0, 10);
-            const point: any = { timestamp: day, ts: +(new Date(day)) };
+        const sortedDays = Array.from(allDays).sort();
+        return sortedDays.map(day => {
+            const point: any = { day, ts: +(new Date(day)) };
             itemsWithChartData.forEach((item) => {
-                const dataPoint = item.chartData?.find((d: ChartDataPoint) => d.timestamp.substring(0, 10) === day);
+                const dataPoint = item.chartData?.find(d => d.day === day);
                 if (dataPoint) {
                     point[`${item.symbol}_apy`] = dataPoint.apy;
                     point[`${item.symbol}_tvl`] = dataPoint.tvlUsd;
@@ -127,6 +152,55 @@ export default function FuturisticChart({ data, allowZoom = true }: { data: Char
         );
     };
 
+    const handleZoomStart = (event: any) => {
+        if (event) {
+            setZoomState({
+                ...zoomState,
+                refAreaLeft: event.activeLabel,
+            });
+        }
+    };
+
+    const handleZoomMove = (event: any) => {
+        if (event && zoomState.refAreaLeft) {
+            setZoomState({
+                ...zoomState,
+                refAreaRight: event.activeLabel,
+            });
+        }
+    };
+
+    const handleZoomEnd = () => {
+        if (zoomState.refAreaLeft && zoomState.refAreaRight) {
+            let left = +zoomState.refAreaLeft;
+            let right = +zoomState.refAreaRight;
+
+            if (left > right) {
+                [left, right] = [right, left];
+            }
+            setZoomState({
+                ...zoomState,
+                refAreaLeft: '',
+                refAreaRight: '',
+                // left and right can be numbers or string
+                left,
+                right,
+            });
+        }
+    };
+
+    const handleZoomOut = () => {
+        setZoomState({
+            ...zoomState,
+            left: 'dataMin',
+            right: 'dataMax',
+            refAreaLeft: '',
+            refAreaRight: '',
+        });
+    };
+
+    console.log(processedData);
+
     return (
         <motion.div
             className="bg-container backdrop-blur-lg rounded-2xl p-2 sm:p-4 shadow-xl"
@@ -158,12 +232,23 @@ export default function FuturisticChart({ data, allowZoom = true }: { data: Char
                         TVL
                     </button>
                 </div> */}
+                {
+                    (typeof zoomState.left === 'number' || typeof zoomState.left === 'number') && <button
+                        onClick={handleZoomOut}
+                        className="px-4 py-2 cursor-pointer rounded-lg text-sm font-medium transition-colors bg-muted text-muted-foreground hover:text-foreground"
+                    >
+                        Reset Zoom
+                    </button>
+                }
             </div>
 
             <div className="w-full h-[400px]">
                 <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart 
-                    data={processedData}                    
+                    <ComposedChart
+                        data={processedData}
+                        onMouseDown={handleZoomStart}
+                        onMouseMove={handleZoomMove}
+                        onMouseUp={handleZoomEnd}
                     >
                         <defs>
                             {itemsWithChartData.map((item, index) => (
@@ -203,18 +288,17 @@ export default function FuturisticChart({ data, allowZoom = true }: { data: Char
                             tickLine={{ stroke: isDark ? '#999' : '#666' }}
                             axisLine={{ stroke: isDark ? '#999' : '#666' }}
                             tickFormatter={formatTs}
-                            allowDataOverflow={true}
-                            domain={['dataMin', 'dataMax']}
-                            // interval={30}
-                            // angle={-45}
-                            textAnchor="end"
-                        // height={50}
+                            interval={10}
+                            domain={[zoomState.left, zoomState.right]}
+                            allowDataOverflow
+                            style={{ userSelect: 'none' }}
                         />
 
                         <YAxis
                             tick={{ fill: isDark ? '#999' : '#666' }}
                             tickLine={{ stroke: isDark ? '#999' : '#666' }}
                             axisLine={{ stroke: isDark ? '#999' : '#666' }}
+                            style={{ userSelect: 'none' }}
                             tickFormatter={(value) =>
                                 activeMetric === 'apy'
                                     ? `${value}%`
@@ -223,7 +307,7 @@ export default function FuturisticChart({ data, allowZoom = true }: { data: Char
                         />
 
                         <Tooltip content={<CustomTooltip />} />
-                        <Legend />
+                        <Legend style={{ userSelect: 'none' }} />
 
                         {itemsWithChartData.map((item, index) => (
                             <Area
@@ -233,7 +317,6 @@ export default function FuturisticChart({ data, allowZoom = true }: { data: Char
                                 name={item.symbol}
                                 stroke={CHART_COLORS[index % CHART_COLORS.length]}
                                 fill={`url(#gradient-${item.symbol})`}
-                                // fill={`#00000000`}
                                 strokeWidth={2}
                                 dot={false}
                                 activeDot={{
@@ -244,6 +327,15 @@ export default function FuturisticChart({ data, allowZoom = true }: { data: Char
                                 }}
                             />
                         ))}
+
+                        {zoomState.refAreaLeft && zoomState.refAreaRight ? (
+                            <ReferenceArea
+                                x1={zoomState.refAreaLeft}
+                                x2={zoomState.refAreaRight}
+                                strokeOpacity={0.3}
+                                fill={isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}
+                            />
+                        ) : null}
                     </ComposedChart>
                 </ResponsiveContainer>
                 {/* <p className="text-muted-foreground text-xs sm:text-sm mb-4">
