@@ -10,12 +10,7 @@ const COLUMNS = [
     {
         key: 'project',
         label: 'Project',
-    },
-    {
-        key: 'tvl',
-        label: 'TVL',
-        type: 'usd',
-    },
+    },    
     {
         key: 'apy',
         label: 'APY',
@@ -31,6 +26,11 @@ const COLUMNS = [
     {
         key: 'avg90',
         label: '90d Avg.',
+    },
+    {
+        key: 'tvl',
+        label: 'TVL',
+        type: 'usd',
     },
     {
         key: 'link',
