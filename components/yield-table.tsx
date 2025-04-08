@@ -1,5 +1,6 @@
 import { YieldData } from "@/app/types";
 import FuturisticTable from "./ui/futuristic-table";
+import FuturisticChart from "./ui/futuristic-chart";
 
 const COLUMNS = [
     {
@@ -46,15 +47,22 @@ const COLUMNS = [
 
 export const YieldTable = ({
     data,
+    chartData,
     timestamp,
 }: {
     data: YieldData[];
+    chartData: YieldData[];
     timestamp: number;
 }) => {
-    return <FuturisticTable
-        scrollableBody={false}
-        data={data?.map(d => ({ ...d, type: d.isVault ? 'Tokenized Vault' : 'Lending' }))}
-        columns={COLUMNS}
-        timestamp={timestamp}
-    />
+    return (
+        <div className="flex flex-col gap-6 w-full">
+            <FuturisticTable
+                scrollableBody={false}
+                data={data?.map(d => ({ ...d, type: d.isVault ? 'Tokenized Vault' : 'Lending' }))}
+                columns={COLUMNS}
+                timestamp={timestamp}
+            />
+            <FuturisticChart data={chartData} />
+        </div>
+    );
 }

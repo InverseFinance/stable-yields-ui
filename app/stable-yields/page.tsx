@@ -6,6 +6,21 @@ export const revalidate = 300;
 export default async function YieldsPage() {
   const data = await fetch(`https://inverse.finance/api/dola/sdola-comparator?v=2`);
   const json = await data.json();
+  const rates = json.rates.filter((r: YieldData) => !['sDAI'].includes(r.symbol));
+  const chartResults = await Promise.allSettled(rates.map(async (r: YieldData) => {
+    if (!r.pool) return [];
+    const data = await fetch(`https://yields.llama.fi/chart/${r.pool}`);
+    const chartResult = await data.json();
+    return chartResult.status === 'success' ? chartResult.data : [];
+  }));
+  const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const chartData = chartResults.map((r,i) => {
+    return {
+      symbol: rates[i].symbol,
+      project: rates[i].project,
+      data: r.status === 'fulfilled' ? r.value?.filter((d: any) => d.timestamp >= ninetyDaysAgo) : [],
+    };
+  })
   return (
     <>
       <header className="flex-wrap items-center justify-center py-12">
@@ -20,7 +35,13 @@ export default async function YieldsPage() {
         </div>
       </header>
       <div className="flex flex-col gap-4 w-full items-center justify-center">
-        <YieldTable data={json.rates.map((r: YieldData) => ({ ...r, project: r.project.replace('FiRM', 'Inverse') }))} timestamp={json.timestamp} />
+        <YieldTable
+          chartData={chartData}
+          data={rates.map((r: YieldData, index: number) => ({
+            ...r,
+            project: r.project.replace('FiRM', 'Inverse'),
+          }))} timestamp={json.timestamp}
+        />
       </div>
     </>
   );
