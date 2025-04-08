@@ -10,9 +10,14 @@ export interface YieldData {
     image: string;
     isVault?: boolean;
     pool?: string;
-    chartData?: Array<{
+}
+
+export interface ChartData {
+    symbol: string;
+    project: string;
+    chartData: {
         timestamp: string;
         apy: number;
         tvlUsd: number;
-    }>;
+    }[];
 }
