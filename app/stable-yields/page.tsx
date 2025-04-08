@@ -13,15 +13,18 @@ export default async function YieldsPage() {
     const chartResult = await data.json();
     return chartResult.status === 'success' ? chartResult.data : [];
   }));
-  const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const ninetyDaysAgo = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
   const topFiveApySymbols = rates.sort((a, b) => b.apy - a.apy).slice(0, 5).map((r) => r.symbol);
   const chartData = chartResults
     .filter((r, i) => topFiveApySymbols.includes(rates[i].symbol))
     .map((r, i) => {
+      const cd = r.status === 'fulfilled' ? r.value?.filter((d: any) => d.timestamp >= ninetyDaysAgo) : [];
       return {
         symbol: rates[i].symbol,
         project: rates[i].project,
-        chartData: r.status === 'fulfilled' ? r.value?.filter((d: any) => d.timestamp >= ninetyDaysAgo) : [],
+        chartData: cd.map(d => {
+          return { ...d, ts: +(new Date(d.timestamp))}
+        }),
       };
     });
   return (

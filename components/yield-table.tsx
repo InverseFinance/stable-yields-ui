@@ -1,4 +1,4 @@
-import { YieldData } from "@/app/types";
+import { ChartData, YieldData } from "@/app/types";
 import FuturisticTable from "./ui/futuristic-table";
 import FuturisticChart from "./ui/futuristic-chart";
 
@@ -51,7 +51,7 @@ export const YieldTable = ({
     timestamp,
 }: {
     data: YieldData[];
-    chartData: YieldData[];
+    chartData: ChartData[];
     timestamp: number;
 }) => {
     return (

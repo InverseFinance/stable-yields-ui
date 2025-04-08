@@ -5,7 +5,6 @@ import { useTheme } from 'next-themes';
 import {
     ResponsiveContainer,
     ComposedChart,
-    Line,
     Area,
     XAxis,
     YAxis,
@@ -13,9 +12,9 @@ import {
     Legend,
     CartesianGrid,
 } from 'recharts';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { smartShortNumber } from '@/lib/utils';
-import { YieldData } from '@/app/types';
+import { ChartData } from '@/app/types';
 
 const CHART_COLORS = [
     'gold',
@@ -38,13 +37,24 @@ const formatDate = (dateStr: string) => {
     });
 };
 
+const formatTs = (ts: number) => {
+    const date = new Date(ts);
+    const day = date.getDate();
+    // if (day !== 1 && day !== 15) return '';
+    return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric'
+    });
+};
+
 interface ChartDataPoint {
     timestamp: string;
+    ts: number;
     apy: number;
     tvlUsd: number;
 }
 
-export default function FuturisticChart({ data }: { data: YieldData[] }) {
+export default function FuturisticChart({ data, allowZoom = true }: { data: ChartData[] }) {
     const { theme } = useTheme();
     const [activeMetric, setActiveMetric] = useState<'apy' | 'tvl'>('apy');
     const isDark = theme === 'dark';
@@ -66,7 +76,7 @@ export default function FuturisticChart({ data }: { data: YieldData[] }) {
         const sortedTimestamps = Array.from(allTimestamps).sort();
         return sortedTimestamps.map(timestamp => {
             const day = timestamp.substring(0, 10);
-            const point: any = { timestamp: day };
+            const point: any = { timestamp: day, ts: +(new Date(day)) };
             itemsWithChartData.forEach((item) => {
                 const dataPoint = item.chartData?.find((d: ChartDataPoint) => d.timestamp.substring(0, 10) === day);
                 if (dataPoint) {
@@ -152,7 +162,9 @@ export default function FuturisticChart({ data }: { data: YieldData[] }) {
 
             <div className="w-full h-[400px]">
                 <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={processedData}>
+                    <ComposedChart 
+                    data={processedData}                    
+                    >
                         <defs>
                             {itemsWithChartData.map((item, index) => (
                                 <linearGradient
@@ -184,12 +196,16 @@ export default function FuturisticChart({ data }: { data: YieldData[] }) {
                         />
 
                         <XAxis
-                            dataKey="timestamp"
+                            dataKey="ts"
+                            scale="time"
+                            type="number"
                             tick={{ fill: isDark ? '#999' : '#666' }}
                             tickLine={{ stroke: isDark ? '#999' : '#666' }}
                             axisLine={{ stroke: isDark ? '#999' : '#666' }}
-                            tickFormatter={formatDate}
-                            interval={5}
+                            tickFormatter={formatTs}
+                            allowDataOverflow={true}
+                            domain={['dataMin', 'dataMax']}
+                            // interval={30}
                             // angle={-45}
                             textAnchor="end"
                         // height={50}
