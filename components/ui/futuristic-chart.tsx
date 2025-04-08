@@ -210,7 +210,7 @@ export default function FuturisticChart({ data }: { data: ChartData[] }) {
         >
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                 <h3 className="text-lg sm:text-xl font-bold text-foreground">
-                    90d Historical {activeMetric.toUpperCase()} Evolution for the current Top 5
+                    90d {activeMetric.toUpperCase()} evolution for the current Top 5
                 </h3>
                 {/* <div className="flex gap-2">
                     <button
@@ -288,7 +288,7 @@ export default function FuturisticChart({ data }: { data: ChartData[] }) {
                             tickLine={{ stroke: isDark ? '#999' : '#666' }}
                             axisLine={{ stroke: isDark ? '#999' : '#666' }}
                             tickFormatter={formatTs}
-                            interval={10}
+                            interval={"equidistantPreserveStart"}
                             domain={[zoomState.left, zoomState.right]}
                             allowDataOverflow
                             style={{ userSelect: 'none' }}
