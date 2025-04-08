@@ -11,6 +11,11 @@ const COLUMNS = [
         label: 'Project',
     },
     {
+        key: 'tvl',
+        label: 'TVL',
+        type: 'usd',
+    },
+    {
         key: 'apy',
         label: 'APY',
     },

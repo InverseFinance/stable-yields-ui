@@ -4,7 +4,7 @@ import { YieldData } from "../types";
 export const revalidate = 300;
 
 export default async function YieldsPage() {
-  const data = await fetch(`https://inverse.finance/api/dola/sdola-comparator`);
+  const data = await fetch(`https://inverse.finance/api/dola/sdola-comparator?v=2`);
   const json = await data.json();
   return (
     <>
@@ -19,7 +19,7 @@ export default async function YieldsPage() {
           </h2>
         </div>
       </header>
-      <div className="flex flex-col gap-4 w-full items-center justify-center">
+      <div className="flex flex-col gap-4 items-center justify-center">
         <YieldTable data={json.rates.map((r: YieldData) => ({ ...r, project: r.project.replace('FiRM', 'Inverse') }))} timestamp={json.timestamp} />
       </div>
     </>

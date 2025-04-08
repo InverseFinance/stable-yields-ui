@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
-import { gaEvent } from "@/lib/utils";
+import { gaEvent, smartShortNumber } from "@/lib/utils";
 
 const projectImages = {
   'Frax': 'https://icons.llamao.fi/icons/protocols/frax?w=48&h=48',
@@ -149,32 +149,32 @@ export default function FuturisticTable({
                             ) : column.key === 'project' ? (
                               <div className="flex items-center gap-2">
                                 <Image 
-                                  className="rounded-full w-6 h-6 sm:w-8 sm:h-8" 
+                                  className="rounded-full w-5 h-5 sm:w-7 sm:h-7" 
                                   src={projectImages[item["project"]] || `https://icons.llamao.fi/icons/protocols/${item["project"].toLowerCase().replace(/ /g, '-')}?w=48&h=48`} 
                                   alt={item['project']} 
-                                  width={30} 
-                                  height={30} 
+                                  width={24} 
+                                  height={24} 
                                 />
-                                <span>{item["project"]}</span>
+                                <span className="text-sm sm:text-base lg:text-lg">{item["project"]}</span>
                               </div>
                             ) : ['symbol', 'borrowToken'].includes(column.key) ? (
                               <div className="flex items-center gap-2">
                                 <Image 
-                                  className="rounded-full w-6 h-6 sm:w-8 sm:h-8" 
+                                  className="rounded-full w-5 h-5 sm:w-7 sm:h-7" 
                                   src={item["image"]} 
                                   alt={item['symbol']} 
-                                  width={30} 
-                                  height={30} 
+                                  width={24} 
+                                  height={24} 
                                 />
-                                <span>{item[column.key]}</span>
+                                <span className="text-sm sm:text-base lg:text-lg">{item[column.key]}</span>
                               </div>
                             ) : typeof item[column.key] === 'number' ? 
-                                `${(item[column.key] as number).toFixed(2)}%` :
+                                column.type === 'usd' ? `${smartShortNumber(item[column.key], 1, true, true)}` : `${(item[column.key] as number).toFixed(2)}%` :
                               typeof item[column.key] === 'string' ? 
-                                item[column.key].replace('fixed', 'Fixed').replace('variable', 'Variable') :
+                                (item[column.key].replace('fixed', 'Fixed').replace('variable', 'Variable') || '-') :
                               typeof item[column.key] === 'boolean' ? 
                                 item[column.key] ? 'Yes' : 'No' :
-                                item[column.key]
+                                item[column.key] || '-'
                           }
                         </td>
                       ))}
