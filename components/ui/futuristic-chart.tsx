@@ -356,7 +356,7 @@ export default function FuturisticChart({ data }: { data: ChartData[] }) {
                     </ComposedChart>
                 </ResponsiveContainer>
                 <p className="text-muted-foreground text-xs sm:text-sm">
-                    Chart data from Defillama, stables without Defillama support will not show on the chart
+                    Stables without Defillama support will not show
                 </p>
             </div>
         </motion.div>
