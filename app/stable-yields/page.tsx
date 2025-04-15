@@ -14,7 +14,7 @@ export default async function YieldsPage() {
     return chartResult.status === 'success' ? chartResult.data : [];
   }));
   const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-  const topFiveApySymbols = rates.sort((a, b) => b.apy - a.apy).slice(0, 5).map((r) => r.symbol);
+  const topFiveApySymbols = rates.sort((a, b) => b.apy - a.apy).filter(r => !!r.pool).slice(0, 5).map((r) => r.symbol);
   const chartData = chartResults
     .filter((r, i) => topFiveApySymbols.includes(rates[i].symbol))
     .map((r, i) => {

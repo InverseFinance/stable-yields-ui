@@ -250,8 +250,8 @@ export default function FuturisticChart({ data }: { data: ChartData[] }) {
                 }
             </div>
 
-            <div className="w-full h-[400px]">
-                <ResponsiveContainer width="100%" height="100%">
+            <div className="w-full h-[500px]">
+                <ResponsiveContainer width="100%" height="98%">
                     <ComposedChart
                         data={processedData}
                         onMouseDown={handleZoomStart}
@@ -355,9 +355,9 @@ export default function FuturisticChart({ data }: { data: ChartData[] }) {
                         ) : null}
                     </ComposedChart>
                 </ResponsiveContainer>
-                {/* <p className="text-muted-foreground text-xs sm:text-sm mb-4">
-                    Chart data from Defillama
-                </p> */}
+                <p className="text-muted-foreground text-xs sm:text-sm">
+                    Chart data from Defillama, stables without Defillama support will not show on the chart
+                </p>
             </div>
         </motion.div>
     );
