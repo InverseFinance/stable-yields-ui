@@ -169,7 +169,7 @@ export default function FuturisticTable({
                                 <span className="text-sm sm:text-base lg:text-lg">{item[column.key]}</span>
                               </div>
                             ) : typeof item[column.key] === 'number' ? 
-                                column.type === 'usd' ? `${smartShortNumber(item[column.key], 1, true, true)}` : `${(item[column.key] as number).toFixed(2)}%` :
+                                column.type === 'usd' ? `${smartShortNumber(item[column.key], 1, true, true)}` : `${item[column.key] ? (item[column.key]).toFixed(2)+'%' : '-'}` :
                               typeof item[column.key] === 'string' ? 
                                 (item[column.key].replace('fixed', 'Fixed').replace('variable', 'Variable') || '-') :
                               typeof item[column.key] === 'boolean' ? 
