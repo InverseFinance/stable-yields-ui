@@ -5,6 +5,7 @@ export const revalidate = 300;
 
 export default async function YieldsPage() {
   const data = await fetch(`https://inverse.finance/api/dola/sdola-comparator?v=2`);
+  // const data = await fetch(`http://localhost:3000/api/dola/sdola-comparator?v=2`);
   const json = await data.json();
   const rates = json.rates.filter((r: YieldData) => !['sDAI'].includes(r.symbol));
   const chartResults = await Promise.allSettled(rates.map(async (r: YieldData) => {
@@ -46,7 +47,9 @@ export default async function YieldsPage() {
           chartData={chartData}
           data={rates.map((r: YieldData, index: number) => ({
             ...r,
-            project: r.project.replace('FiRM', 'Inverse'),
+            project: r.project.replace('FiRM', 'Inverse').replace(/fx-protocol/, '(fx) Protocol'),
+            projectLabel: r.project.replace('FiRM', 'Inverse').replace(/fx-protocol/ig, 'f(x) Protocol'),
+            symbol: r.symbol.replace('fxSave', 'fxSAVE'),
           }))} timestamp={json.timestamp}
         />
       </div>

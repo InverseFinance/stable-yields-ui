@@ -155,7 +155,7 @@ export default function FuturisticTable({
                                   width={24} 
                                   height={24} 
                                 />
-                                <span className="text-sm sm:text-base lg:text-lg">{item["project"]}</span>
+                                <span className="text-sm sm:text-base lg:text-lg">{item["projectLabel"]}</span>
                               </div>
                             ) : ['symbol', 'borrowToken'].includes(column.key) ? (
                               <div className="flex items-center gap-2">
