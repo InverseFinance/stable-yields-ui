@@ -32,6 +32,10 @@ const COLUMNS = [
         label: 'TVL',
         type: 'usd',
     },
+    // {
+    //     key: 'tvlGrowth90',
+    //     label: '90d TVL Growth',
+    // },
     {
         key: 'link',
         label: '',
