@@ -53,16 +53,19 @@ export const YieldTable = ({
     data,
     chartData,
     timestamp,
+    usTreasuryYield,
 }: {
     data: YieldData[];
     chartData: ChartData[];
     timestamp: number;
+    usTreasuryYield: number;
 }) => {
     return (
         <div className="flex flex-col gap-8 w-full">
             <FuturisticTable
+                usTreasuryYield={usTreasuryYield}
                 scrollableBody={false}
-                data={data?.map(d => ({ ...d, type: d.isVault ? 'Tokenized Vault' : 'Lending' }))}
+                data={data?.map(d => ({ ...d, tokens: (d.tokens ? d.tokens : [d]), type: d.isVault ? 'Tokenized Vault' : 'Lending' }))}
                 columns={COLUMNS}
                 timestamp={timestamp}
             />

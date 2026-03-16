@@ -41,12 +41,14 @@ interface Column {
 
 export default function FuturisticTable({
   timestamp,
+  usTreasuryYield,
   data,
   columns,
   projectCollaterals,
   scrollableBody = true
 }: {
   timestamp: number;
+  usTreasuryYield: number;
   data: TableData[];
   columns: Column[];
   projectCollaterals?: {
@@ -65,6 +67,17 @@ export default function FuturisticTable({
     if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
     return 0;
   });
+
+  const showTreasuryLine = sortConfig.key === 'apy' && usTreasuryYield > 0;
+  let treasuryLineIndex = -1;
+  if (showTreasuryLine) {
+    if (sortConfig.direction === 'desc') {
+      treasuryLineIndex = sortedData.findIndex(item => (item.apy ?? 0) < usTreasuryYield);
+    } else {
+      treasuryLineIndex = sortedData.findIndex(item => (item.apy ?? 0) >= usTreasuryYield);
+    }
+    if (treasuryLineIndex <= 0) treasuryLineIndex = -1;
+  }
 
   const handleSort = (key: string) => {
     setSortConfig((prev) => ({
@@ -109,8 +122,8 @@ export default function FuturisticTable({
         transition={{ duration: 0.5 }}
       >
         <div className="relative">
-          <div className="overflow-x-auto">
-            <div className={`${scrollableBody ? 'max-h-[60vh]' : ''} overflow-y-auto`}>
+          <div className="overflow-x-auto lg:overflow-x-visible">
+            <div className={`${scrollableBody ? 'max-h-[60vh]' : ''} `}>
               <table className="w-full text-left text-foreground min-w-[800px]">
                 <thead className="sticky top-0 backdrop-blur-lg z-10">
                   <tr className="text-muted-foreground">
@@ -126,21 +139,30 @@ export default function FuturisticTable({
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedData.map((item, index) => (
+                  {sortedData.map((item, index) => {
+                    const isTreasuryRow = showTreasuryLine && index === treasuryLineIndex;
+                    const isRowBeforeTreasury = showTreasuryLine && index === treasuryLineIndex - 1;
+                    return (
                     <motion.tr
                       key={index}
-                      className="table-border hover:bg-muted/50 transition"
+                      className={`${isRowBeforeTreasury ? '' : 'table-border'} hover:bg-muted/50 transition`}
+                      style={isTreasuryRow ? { borderTop: '2px dashed oklch(0.554 0.046 257.417)' } : undefined}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: index * 0.1 }}
                     >
-                      {columns.map((column) => (
-                        <td 
+                      {columns.map((column, colIndex) => (
+                        <td
                           className={`min-w-[125px] p-2 sm:p-3 text-primary-foreground text-sm sm:text-base lg:text-xl font-bold whitespace-nowrap ${
                             item[column.key] === true || item[column.key] === 'fixed' ? 'text-green-400' : ''
-                          }`} 
+                          } ${isTreasuryRow && colIndex === 0 ? 'relative overflow-visible' : ''}`}
                           key={column.key}
                         >
+                          {isTreasuryRow && colIndex === 0 && (
+                            <span className="absolute top-0 -translate-y-1/2 z-20 text-[12px] sm:text-sm font-semibold whitespace-nowrap backdrop-blur-xl shadow-lg bg-container px-3 rounded text-muted-foreground">
+                              US Treasury Yield: <b>{usTreasuryYield.toFixed(2)}%</b>
+                            </span>
+                          )}
                           {
                             column.isCta ? (
                               <button className="cta-button text-sm sm:text-base" onClick={() => handleCta(item)}>
@@ -148,38 +170,39 @@ export default function FuturisticTable({
                               </button>
                             ) : column.key === 'project' ? (
                               <div className="flex items-center gap-2">
-                                <Image 
-                                  className="rounded-full w-5 h-5 sm:w-7 sm:h-7" 
-                                  src={projectImages[item["project"]] || `https://icons.llamao.fi/icons/protocols/${item["project"].toLowerCase().replace(/ /g, '-')}?w=48&h=48`} 
-                                  alt={item['project']} 
-                                  width={24} 
-                                  height={24} 
+                                <Image
+                                  className="rounded-full w-5 h-5 sm:w-7 sm:h-7"
+                                  src={projectImages[item["project"]] || `https://icons.llamao.fi/icons/protocols/${item["project"].toLowerCase().replace(/ /g, '-')}?w=48&h=48`}
+                                  alt={item['project']}
+                                  width={24}
+                                  height={24}
                                 />
                                 <span className="text-sm sm:text-base lg:text-lg">{item["projectLabel"]}</span>
                               </div>
                             ) : ['symbol', 'borrowToken'].includes(column.key) ? (
                               <div className="flex items-center gap-2">
-                                <Image 
-                                  className="rounded-full w-5 h-5 sm:w-7 sm:h-7" 
-                                  src={item["image"]} 
-                                  alt={item['symbol']} 
-                                  width={24} 
-                                  height={24} 
+                                <Image
+                                  className="rounded-full w-5 h-5 sm:w-7 sm:h-7"
+                                  src={item["image"]}
+                                  alt={item['symbol']}
+                                  width={24}
+                                  height={24}
                                 />
                                 <span className="text-sm sm:text-base lg:text-lg">{item[column.key]}</span>
                               </div>
-                            ) : typeof item[column.key] === 'number' ? 
+                            ) : typeof item[column.key] === 'number' ?
                                 column.type === 'usd' ? `${smartShortNumber(item[column.key], 1, true, true)}` : `${item[column.key] ? (item[column.key]).toFixed(2)+'%' : '-'}` :
-                              typeof item[column.key] === 'string' ? 
+                              typeof item[column.key] === 'string' ?
                                 (item[column.key].replace('fixed', 'Fixed').replace('variable', 'Variable') || '-') :
-                              typeof item[column.key] === 'boolean' ? 
+                              typeof item[column.key] === 'boolean' ?
                                 item[column.key] ? 'Yes' : 'No' :
                                 item[column.key] || '-'
                           }
                         </td>
                       ))}
                     </motion.tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

@@ -4,9 +4,15 @@ import { YieldData } from "../types";
 export const revalidate = 300;
 
 export default async function YieldsPage() {
-  const data = await fetch(`https://inverse.finance/api/dola/sdola-comparator?v=2`);
+  const [stablesRes, usTreasuryRes] = await Promise.allSettled([
+    fetch(`https://inverse.finance/api/dola/sdola-comparator?v=2`),
+    fetch(`https://moneymatter.me/api/treasury/interest-rates`),
+  ])
+  const json = stablesRes.status === 'fulfilled' ? await stablesRes.value.json() : { rates: [] };
+  
+  const usTreasuryData = usTreasuryRes.status === 'fulfilled' ? await usTreasuryRes.value.json() : { data: [] };
+  const usTreasuryYield = usTreasuryData?.data?.length > 0 ? usTreasuryData.data[usTreasuryData.data.length -1]?.BC_1MONTH : 0;
   // const data = await fetch(`http://localhost:3000/api/dola/sdola-comparator?v=2`);
-  const json = await data.json();
   const rates = json.rates.filter((r: YieldData) => !['sDAI'].includes(r.symbol));
   const chartResults = await Promise.allSettled(rates.map(async (r: YieldData) => {
     if (!r.pool) return [];
@@ -51,6 +57,7 @@ export default async function YieldsPage() {
       </header>
       <div className="flex flex-col gap-4 w-full items-center justify-center">
         <YieldTable
+          usTreasuryYield={usTreasuryYield}
           chartData={chartData}
           data={rates.map((r: YieldData, index: number) => ({
             ...r,
