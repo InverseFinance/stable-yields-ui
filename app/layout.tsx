@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Web3Provider } from "@/components/web3-provider";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -52,26 +54,35 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-futuristic`}
       >
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-          <div className="min-h-screen flex flex-col">
-            <ThemeToggle />
-            <main className="flex-1 flex flex-col gap-0 items-center justify-start" style={{ width: '100%', maxWidth: '1000px', margin: '0 auto' }}>
-              {children}
-            </main>
-            <footer className="py-6 flex gap-2 flex-col items-center justify-center">
-              <a
-                href="https://inverse.finance"
-                target="_blank"
-                className="text-muted-foreground underline"
-              >
-                Built by Inverse Finance
-              </a>
-              <p
-                className="text-muted-foreground"
-              >
-                Sources: Ethereum chain, project APIs and DeFillama
-              </p>
-            </footer>
-          </div>
+          <Web3Provider>
+            <div className="min-h-screen flex flex-col">
+              <div className="flex flex-row gap-2 justify-end px-2 py-1">
+                <ConnectButton
+                  accountStatus={{ smallScreen: 'address', largeScreen: 'full' }}
+                  chainStatus={'icon'}
+                  showBalance={false}
+                />
+                <ThemeToggle />
+              </div>
+              <main className="flex-1 flex flex-col gap-0 items-center justify-start" style={{ width: '100%', maxWidth: '1000px', margin: '0 auto' }}>
+                {children}
+              </main>
+              <footer className="py-6 flex gap-2 flex-col items-center justify-center">
+                <a
+                  href="https://inverse.finance"
+                  target="_blank"
+                  className="text-muted-foreground underline"
+                >
+                  Built by Inverse Finance
+                </a>
+                <p
+                  className="text-muted-foreground"
+                >
+                  Sources: Ethereum chain, project APIs and DeFillama
+                </p>
+              </footer>
+            </div>
+          </Web3Provider>
         </ThemeProvider>
       </body>
     </html>

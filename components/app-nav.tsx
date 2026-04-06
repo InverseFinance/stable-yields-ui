@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 
 export const AppNav = ({ activeItem }: { activeItem: string }) => {
     const navItems = [
@@ -12,11 +13,12 @@ export const AppNav = ({ activeItem }: { activeItem: string }) => {
     return (
         <div className="w-full mt-10">
             <motion.nav
-                className="bg-gray-900/50 backdrop-blur-lg p-3 rounded-2xl shadow-lg border border-gray-800 flex justify-center gap-6 max-w-md mx-auto mt-5"
+                className="bg-gray-900/50 backdrop-blur-lg p-3 rounded-2xl shadow-lg border border-gray-800 flex items-center justify-between gap-6"
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
             >
+                <div className="flex items-center gap-2">
                 {navItems.map((item) => {
                     const isActive = activeItem === item.path;
                     return (
@@ -37,6 +39,8 @@ export const AppNav = ({ activeItem }: { activeItem: string }) => {
                         </Link>
                     );
                 })}
+                </div>
+                <ConnectButton showBalance={false} chainStatus="none" accountStatus={{ smallScreen: 'avatar', largeScreen: 'full' }} />
             </motion.nav>
         </div>
     );

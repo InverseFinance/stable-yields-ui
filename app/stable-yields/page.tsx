@@ -1,5 +1,6 @@
 import { YieldTable } from "@/components/yield-table";
 import { YieldData } from "../types";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 
 export const revalidate = 300;
 
@@ -9,9 +10,9 @@ export default async function YieldsPage() {
     fetch(`https://moneymatter.me/api/treasury/interest-rates`),
   ])
   const json = stablesRes.status === 'fulfilled' ? await stablesRes.value.json() : { rates: [] };
-  
+
   const usTreasuryData = usTreasuryRes.status === 'fulfilled' ? await usTreasuryRes.value.json() : { data: [] };
-  const usTreasuryYield = usTreasuryData?.data?.length > 0 ? usTreasuryData.data[usTreasuryData.data.length -1]?.BC_1MONTH : 0;
+  const usTreasuryYield = usTreasuryData?.data?.length > 0 ? usTreasuryData.data[usTreasuryData.data.length - 1]?.BC_1MONTH : 0;
   // const data = await fetch(`http://localhost:3000/api/dola/sdola-comparator?v=2`);
   const rates = json.rates.filter((r: YieldData) => !['sDAI'].includes(r.symbol));
   const chartResults = await Promise.allSettled(rates.map(async (r: YieldData) => {
@@ -27,9 +28,9 @@ export default async function YieldsPage() {
     .map((r, i) => {
       const cd = r.status === 'fulfilled' ? r.value?.filter((d: any) => d.timestamp >= ninetyDaysAgo) : [];
       // tolerate 5 day missing
-      if(cd.length >= 85) {
+      if (cd.length >= 85) {
         rates[i].tvlGrowth90 = (cd[cd.length - 1].tvlUsd - cd[0].tvlUsd) / cd[0].tvlUsd * 100;
-      } else if(rates[i].totalAssets90d && rates[i].totalAssets) {
+      } else if (rates[i].totalAssets90d && rates[i].totalAssets) {
         rates[i].tvlGrowth90 = (rates[i].totalAssets90d - rates[i].totalAssets) / rates[i].totalAssets * 100;
       }
       return {
@@ -37,7 +38,7 @@ export default async function YieldsPage() {
         project: rates[i].project,
         chartData: cd.map(d => {
           const day = d.timestamp.substring(0, 10);
-          return { ...d, day, ts: +(new Date(day))}
+          return { ...d, day, ts: +(new Date(day)) }
         }),
       };
     })
