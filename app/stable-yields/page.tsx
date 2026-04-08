@@ -6,12 +6,13 @@ import { fetchTokenPrices } from "@/lib/fetchTokenPrices";
 export const revalidate = 300;
 
 export default async function YieldsPage() {
-  const [stablesRes, usTreasuryRes, tokenPrices] = await Promise.allSettled([
+  const [stablesRes, usTreasuryRes, tokenPricesRes] = await Promise.allSettled([
     fetch(`https://inverse.finance/api/dola/sdola-comparator?v=2`),
     fetch(`https://moneymatter.me/api/treasury/interest-rates`),
     fetchTokenPrices(),
   ])
   const json = stablesRes.status === 'fulfilled' ? await stablesRes.value.json() : { rates: [] };
+  const tokenPrices = tokenPricesRes.status === 'fulfilled' ? tokenPricesRes.value : {};
 
   const usTreasuryData = usTreasuryRes.status === 'fulfilled' ? await usTreasuryRes.value.json() : { data: [] };
   const usTreasuryYield = usTreasuryData?.data?.length > 0 ? usTreasuryData.data[usTreasuryData.data.length - 1]?.BC_1MONTH : 0;
