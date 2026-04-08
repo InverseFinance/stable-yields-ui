@@ -124,15 +124,24 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
 }
 
 @keyframes gradientAnimation {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 .bg-futuristic {
@@ -157,4 +166,9 @@
 .table-border {
   @apply border-border;
   border-bottom-width: 1px;
+}
+
+iframe {
+  background: var(--background) !important;
+  color-scheme: dark;
 }

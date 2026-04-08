@@ -224,13 +224,14 @@ export default function FuturisticTable({
       </motion.div>
 
       <AnimatePresence>
-        {showModal && (
+        {(
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-background/50 backdrop-blur-sm flex items-center justify-center z-50"
             onClick={handleDismiss}
+            style={{ display: showModal ? 'flex' : 'none' }}
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
@@ -239,15 +240,15 @@ export default function FuturisticTable({
               className="bg-container p-4 sm:p-6 rounded-xl shadow-xl sm:w-xl max-w-md mx-4"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-lg sm:text-xl font-bold text-foreground mb-4">External Link Disclaimer</h3>
+              <h3 className="text-lg sm:text-xl font-bold text-foreground mb-4">Earn with {pendingItem?.symbol}</h3>
               {/* <p className="text-sm sm:text-base text-muted-foreground mb-6">
                 You are about to visit an external website. We are not affiliated with or responsible for the content on external sites and only provide a link for your convenience.
               </p> */}
-              {
-                !!pendingItem && <div className="rounded-full">
-                  <Swap tokens={[pendingItem]} />
-                </div>
-              }
+
+              <div className="rounded-full">
+                <Swap tokens={pendingItem ? [pendingItem] : [sortedData[0]]} />
+              </div>
+
               <div className="flex gap-4 justify-end">
                 <button
                   onClick={handleDismiss}
@@ -260,7 +261,7 @@ export default function FuturisticTable({
                     onClick={() => gaEvent({ action: `continue-${pendingItem?.project}-${pendingItem?.symbol}`, params: { stable: pendingItem?.symbol, project: pendingItem?.project, key: `${pendingItem?.symbol}_${pendingItem?.project}`, apy: pendingItem?.apy } })}
                     className="cta-button cursor-pointer px-3 sm:px-4 py-2 text-sm sm:text-base text-foreground"
                   >
-                    Continue
+                    Visit official website
                   </button>
                 </a>
               </div>

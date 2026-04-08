@@ -2,7 +2,6 @@
 import { ChartData, YieldData } from "@/app/types";
 import FuturisticTable from "./ui/futuristic-table";
 import FuturisticChart from "./ui/futuristic-chart";
-import { Swap } from "./Swap";
 
 const COLUMNS = [
     {
@@ -64,7 +63,6 @@ export const YieldTable = ({
 }) => {
     return (
         <div className="flex flex-col gap-8 w-full">
-            <Swap tokens={[]} />
             <FuturisticTable
                 usTreasuryYield={usTreasuryYield}
                 scrollableBody={false}
