@@ -603,7 +603,7 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
           return { text: t.approving, onClick: () => { }, disabled: true };
         if (ensoStep === 'routing' || isEnsoRoutePending || isEnsoRouteConfirming)
           return { text: t.depositing, onClick: () => { }, disabled: true };
-        return { text: t.depositToken.replace('{symbol}', selectedToken.symbol), onClick: withTosCheck(handleEnsoDeposit), disabled: false };
+        return { text: `Swap ${selectedToken.symbol} to ${stakingData?.zapSymbol || stakingData?.symbol}`, onClick: withTosCheck(handleEnsoDeposit), disabled: false };
       } else {
         if (isApproving || isApproveConfirming) return { text: t.approving, onClick: () => { }, disabled: true };
         if (needsApproval) return { text: t.approveDola, onClick: withTosCheck(handleApprove), disabled: false };
@@ -634,11 +634,11 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
   return (
     <>
       {showTosModal && <TermsModal onAccept={handleTosAccept} onClose={() => setShowTosModal(false)} />}
-      <div className="card-shine relative bg-card-bg border border-white/[0.05] rounded-2xl backdrop-blur-sm">
+      <div className="card-shine relative bg-container border border-white/[0.05] rounded-2xl backdrop-blur-sm">
 
         {/* Tabs */}
         <div className="flex border-b border-white/[0.05]">
-          {/* {(['stake', 'unstake'] as Tab[]).map((tab) => (
+          {(['stake'] as Tab[]).map((tab) => (
           <button
             key={tab}
             onClick={() => {
@@ -660,7 +660,7 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
               <span className="absolute bottom-0 left-1/4 right-1/4 h-px bg-gradient-to-r from-transparent via-accent to-transparent" />
             )}
           </button>
-        ))} */}
+        ))}
 
           {/* Slippage settings */}
           <div className="relative flex items-center px-4" ref={slippageRef}>
@@ -681,7 +681,7 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
             </button>
 
             {showSlippage && (
-              <div className="absolute top-full right-0 z-20 mt-1 bg-card-bg border border-white/[0.08] rounded-xl p-3 shadow-xl w-64">
+              <div className="absolute top-full right-0 z-20 mt-1 bg-container border border-white/[0.08] rounded-xl p-3 shadow-xl w-64">
                 <div className="text-[10px] uppercase tracking-[0.15em] text-text-muted font-medium mb-2.5">
                   {t.slippageTolerance}
                 </div>
