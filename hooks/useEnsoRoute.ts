@@ -36,11 +36,6 @@ export function useEnsoRoute(
       setResult(EMPTY);
       return;
     }
-    // For deposit flow (no explicit tokenOut): skip if tokenIn is DOLA
-    if (tokenOut === SDOLA_ADDRESS && isDola(tokenIn)) {
-      setResult(EMPTY);
-      return;
-    }
 
     const id = ++abortRef.current;
     setResult(prev => ({ ...prev, isLoading: true, error: null }));

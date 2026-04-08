@@ -122,7 +122,7 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
     functionName: 'balanceOf',
     args: address ? [address] : undefined,
     query: {
-      enabled: !!address && activeTab === 'stake' && !isDolaToSDola && !isNativeEth(selectedToken.address),
+      enabled: !!address && activeTab === 'stake' && !isNativeEth(selectedToken.address),
     },
   });
 
@@ -171,7 +171,7 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
 
   // ── Enso routes ──
 
-  const usingEnsoDeposit = activeTab === 'stake' && !isDolaToSDola
+  const usingEnsoDeposit = activeTab === 'stake'
   const usingEnsoWithdraw = activeTab === 'unstake' && !isDola(withdrawDestToken.address);
 
   const depositSlippage = slippageSetting === 'auto'
@@ -796,18 +796,18 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
           {/* Preview — Deposit */}
           {parsedAmount > 0n && activeTab === 'stake' && (
             <div className="border border-white/[0.04] rounded-xl px-4 py-3">
-              {selectedToken.price || isDola(selectedToken.address) ? (
+              {selectedToken.price ? (
                 <SelectedOpportunity
                   token={stakingData}
                   apy={stakingData.apy}
                   totalAssets={stakingData.totalAssets}
                   priceUsd={selectedToken.price}
-                  depositUsd={(parseFloat(amount) || 0) * (isDola(selectedToken.address) ? (stakingData.dolaPriceUsd || selectedToken.price || 1) : selectedToken.price)}
+                  depositUsd={(parseFloat(amount) || 0) * selectedToken.price}
                   estimatedOutput={ensoDepositRoute.isLoading ? '' : ensoDepositRoute.amountOut}
                 />
               )
                 :
-                !selectedToken.price && !isDola(selectedToken.address) && !isConnected && selectedToken.isIdleStable ? (
+                !selectedToken.price && !isConnected && selectedToken.isIdleStable ? (
                   <SelectedOpportunity
                     token={stakingData}
                     apy={stakingData.apy}
