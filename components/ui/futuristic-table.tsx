@@ -6,6 +6,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { gaEvent, smartShortNumber } from "@/lib/utils";
 import { Swap } from '@/components/Swap'
+import { TokenPrices } from "@/lib/fetchTokenPrices";
+import { StakingCard } from '../StakingCard'
 
 const projectImages = {
   'Frax': 'https://icons.llamao.fi/icons/protocols/frax?w=48&h=48',
@@ -46,7 +48,8 @@ export default function FuturisticTable({
   data,
   columns,
   projectCollaterals,
-  scrollableBody = true
+  scrollableBody = true,
+  tokenPrices,
 }: {
   timestamp: number;
   usTreasuryYield: number;
@@ -56,6 +59,7 @@ export default function FuturisticTable({
     [key: string]: string[];
   };
   scrollableBody?: boolean;
+  tokenPrices: TokenPrices;
 }) {
   const [sortConfig, setSortConfig] = useState<any>({ key: "apy", direction: "desc" });
   const [showModal, setShowModal] = useState(false);
@@ -237,7 +241,7 @@ export default function FuturisticTable({
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-container p-4 sm:p-6 rounded-xl shadow-xl sm:w-xl max-w-md mx-4"
+              className="bg-container p-4 sm:p-6 rounded-xl shadow-xl sm:w-xl max-w-lg mx-4"
               onClick={(e) => e.stopPropagation()}
             >
               <h3 className="text-lg sm:text-xl font-bold text-foreground mb-4">Earn with {pendingItem?.symbol}</h3>
@@ -246,7 +250,8 @@ export default function FuturisticTable({
               </p> */}
 
               <div className="rounded-full">
-                <Swap tokens={pendingItem ? [pendingItem] : [sortedData[0]]} />
+                {/* <Swap tokens={pendingItem ? [pendingItem] : [sortedData[0]]} /> */}
+                <StakingCard stakingData={pendingItem ? pendingItem : sortedData[0]} tokenPrices={tokenPrices} />
               </div>
 
               <div className="flex gap-4 justify-end">

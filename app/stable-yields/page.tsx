@@ -1,13 +1,15 @@
 import { YieldTable } from "@/components/yield-table";
 import { YieldData } from "../types";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { fetchTokenPrices } from "@/lib/fetchTokenPrices";
 
 export const revalidate = 300;
 
 export default async function YieldsPage() {
-  const [stablesRes, usTreasuryRes] = await Promise.allSettled([
+  const [stablesRes, usTreasuryRes, tokenPrices] = await Promise.allSettled([
     fetch(`https://inverse.finance/api/dola/sdola-comparator?v=2`),
     fetch(`https://moneymatter.me/api/treasury/interest-rates`),
+    fetchTokenPrices(),
   ])
   const json = stablesRes.status === 'fulfilled' ? await stablesRes.value.json() : { rates: [] };
 
@@ -58,6 +60,7 @@ export default async function YieldsPage() {
       </header>
       <div className="flex flex-col gap-4 w-full items-center justify-center">
         <YieldTable
+          tokenPrices={tokenPrices}
           usTreasuryYield={usTreasuryYield}
           chartData={chartData}
           data={rates.map((r: YieldData, index: number) => ({

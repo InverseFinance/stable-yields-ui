@@ -2,6 +2,8 @@
 import { ChartData, YieldData } from "@/app/types";
 import FuturisticTable from "./ui/futuristic-table";
 import FuturisticChart from "./ui/futuristic-chart";
+import { TokenPrices } from "@/lib/fetchTokenPrices";
+import { LanguageProvider } from "@/lib/useLanguage";
 
 const COLUMNS = [
     {
@@ -11,7 +13,7 @@ const COLUMNS = [
     {
         key: 'project',
         label: 'Project',
-    },    
+    },
     {
         key: 'apy',
         label: 'APY',
@@ -55,22 +57,27 @@ export const YieldTable = ({
     chartData,
     timestamp,
     usTreasuryYield,
+    tokenPrices,
 }: {
     data: YieldData[];
     chartData: ChartData[];
     timestamp: number;
     usTreasuryYield: number;
+    tokenPrices: TokenPrices
 }) => {
     return (
-        <div className="flex flex-col gap-8 w-full">
-            <FuturisticTable
-                usTreasuryYield={usTreasuryYield}
-                scrollableBody={false}
-                data={data?.map(d => ({ ...d, tokens: (d.tokens ? d.tokens : [d]), type: d.isVault ? 'Tokenized Vault' : 'Lending' }))}
-                columns={COLUMNS}
-                timestamp={timestamp}
-            />
-            <FuturisticChart data={chartData} />
-        </div>
+        <LanguageProvider>
+            <div className="flex flex-col gap-8 w-full">
+                <FuturisticTable
+                    tokenPrices={tokenPrices}
+                    usTreasuryYield={usTreasuryYield}
+                    scrollableBody={false}
+                    data={data?.map(d => ({ ...d, tokens: (d.tokens ? d.tokens : [d]), type: d.isVault ? 'Tokenized Vault' : 'Lending' }))}
+                    columns={COLUMNS}
+                    timestamp={timestamp}
+                />
+                <FuturisticChart data={chartData} />
+            </div>
+        </LanguageProvider>
     );
 }
