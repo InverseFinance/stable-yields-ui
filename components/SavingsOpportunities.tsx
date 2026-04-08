@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { SupportedToken } from "@/lib/tokens"
-import { formatUsd, formatApy } from '@/lib/utils';
+import { formatUsd, formatApy, formatTokenAmount } from '@/lib/utils';
 import { useLanguage } from '@/lib/useLanguage';
 import Image from 'next/image';
 
@@ -105,20 +105,22 @@ export const SelectedOpportunity = ({
     token,
     apy,
     totalAssets,
-    dolaPriceUsd,
+    priceUsd,
     depositUsd,
+    estimatedOutput,
 }: {
     token: SupportedToken
     apy: number
     totalAssets: number
-    dolaPriceUsd: number
+    priceUsd: number
     depositUsd: number
+    estimatedOutput: string
 }) => {
     const { t } = useLanguage();
 
     if (!depositUsd || depositUsd <= 0) return null;
 
-    const depositDola = dolaPriceUsd ? depositUsd / dolaPriceUsd : depositUsd;
+    const depositDola = priceUsd ? depositUsd / priceUsd : depositUsd;
     const newTotalAssets = totalAssets + depositDola;
     const estimatedNewApy = newTotalAssets ? apy * (totalAssets / newTotalAssets) : 0;
     const estimatedYearlyGain = estimatedNewApy / 100 * depositUsd;
@@ -128,10 +130,12 @@ export const SelectedOpportunity = ({
             <div className="flex flex-col gap-0.5">
                 <span className="text-text-muted text-xs">{t.estApyAfterDeposit}</span>
                 <span className="text-text-muted text-xs">{t.estYearlyGains}</span>
+                <span className="text-text-muted text-xs">{t.estimatedOutput}</span>
             </div>
             <div className="flex flex-col items-end gap-0.5">
                 <span className="font-mono text-accent font-semibold text-xs gradient-text">{formatApy(estimatedNewApy)}</span>
                 <span className="font-mono text-success text-xs">+{formatUsd(estimatedYearlyGain)}/yr</span>
+                <span className="font-mono text-primary text-xs">{estimatedOutput ? `${formatTokenAmount(estimatedOutput, token.decimals, 2)} ${token.zapSymbol || token.symbol}` : '-'}</span>
             </div>
         </div>
     );

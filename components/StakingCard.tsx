@@ -182,8 +182,6 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
     ? (withdrawDestToken.isStablish ? '3' : '30')
     : slippageSetting;
 
-  console.log(stakingData)
-
   const ensoDepositRoute = useEnsoRoute(
     usingEnsoDeposit ? selectedToken.address : undefined,
     amountInWei,
@@ -426,9 +424,7 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
     const qty = parseFloat(amount);
     if (!qty || qty <= 0) return 0;
     if (activeTab === 'stake') {
-      const price = isDola(selectedToken.address)
-        ? (stakingData?.dolaPriceUsd || 1)
-        : (selectedToken.price || 0);
+      const price = (selectedToken.price || 0);
       return qty * price;
     }
     return qty * (stakingData?.dolaPriceUsd || 1);
@@ -637,36 +633,36 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
       <div className="card-shine relative bg-container border border-white/[0.05] rounded-2xl backdrop-blur-sm">
 
         {/* Tabs */}
-        <div className="flex border-b border-white/[0.05]">
+        <div className="relative flex border-b border-white/[0.05]">
           {(['stake'] as Tab[]).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => {
-              gaEvent({ action: 'tab_switch', params: { category: 'staking', label: tab, value: 0 } });
-              setActiveTab(tab);
-              setAmount('');
-              setSelectedToken(getDefaultToken(sortedTokens));
-              setEnsoStep('idle');
-              setIsMaxWithdraw(false);
-              setShowSlippage(false);
-            }}
-            className={`cursor-pointer flex-1 py-3.5 text-sm font-medium tracking-wide transition-all duration-200 relative ${activeTab === tab
-              ? 'text-foreground'
-              : 'text-text-muted hover:text-text-secondary'
-              }`}
-          >
-            {tab === 'stake' ? t.tabDeposit : t.tabWithdraw}
-            {activeTab === tab && (
-              <span className="absolute bottom-0 left-1/4 right-1/4 h-px bg-gradient-to-r from-transparent via-accent to-transparent" />
-            )}
-          </button>
-        ))}
+            <button
+              key={tab}
+              onClick={() => {
+                gaEvent({ action: 'tab_switch', params: { category: 'staking', label: tab, value: 0 } });
+                setActiveTab(tab);
+                setAmount('');
+                setSelectedToken(getDefaultToken(sortedTokens));
+                setEnsoStep('idle');
+                setIsMaxWithdraw(false);
+                setShowSlippage(false);
+              }}
+              className={`cursor-pointer flex-1 py-3.5 text-sm font-medium tracking-wide transition-all duration-200 relative ${activeTab === tab
+                ? 'text-foreground'
+                : 'text-text-muted hover:text-text-secondary'
+                }`}
+            >
+              {tab === 'stake' ? 'Earn with ' + stakingData.symbol : t.tabWithdraw}
+              {activeTab === tab && (
+                <span className="absolute bottom-0 left-1/4 right-1/4 h-px bg-gradient-to-r from-transparent via-accent to-transparent" />
+              )}
+            </button>
+          ))}
 
           {/* Slippage settings */}
-          <div className="relative flex items-center px-4" ref={slippageRef}>
+          <div className="absolute top-0 right-0 width-[90px] bottom-0 flex items-center justify-end px-4" ref={slippageRef}>
             <button
               onClick={() => setShowSlippage(s => !s)}
-              className="flex items-center gap-1.5 text-text-muted hover:text-text-secondary transition-colors cursor-pointer"
+              className="absolute top-0 bottom-0 flex items-center gap-1.5 text-text-muted hover:text-text-secondary transition-colors cursor-pointer"
               title="Slippage settings"
             >
               {slippageSetting !== 'auto' && (
@@ -689,8 +685,8 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
                   <button
                     onClick={() => setSlippageSetting('auto')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${slippageSetting === 'auto'
-                        ? 'bg-accent text-[#1A0E00]'
-                        : 'bg-white/[0.05] text-text-muted hover:text-text-secondary border border-white/[0.06]'
+                      ? 'bg-accent text-[#1A0E00]'
+                      : 'bg-white/[0.05] text-text-muted hover:text-text-secondary border border-white/[0.06]'
                       }`}
                   >
                     Auto
@@ -700,8 +696,8 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
                       key={opt.value}
                       onClick={() => { setSlippageSetting(opt.value); setShowSlippage(false); }}
                       className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all cursor-pointer ${slippageSetting === opt.value
-                          ? 'bg-accent text-[#1A0E00]'
-                          : 'bg-white/[0.05] text-text-muted hover:text-text-secondary border border-white/[0.06]'
+                        ? 'bg-accent text-[#1A0E00]'
+                        : 'bg-white/[0.05] text-text-muted hover:text-text-secondary border border-white/[0.06]'
                         }`}
                     >
                       {opt.label}
@@ -802,21 +798,23 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
             <div className="border border-white/[0.04] rounded-xl px-4 py-3">
               {selectedToken.price || isDola(selectedToken.address) ? (
                 <SelectedOpportunity
-                  token={selectedToken}
+                  token={stakingData}
                   apy={stakingData.apy}
                   totalAssets={stakingData.totalAssets}
-                  dolaPriceUsd={stakingData.dolaPriceUsd ?? 1}
+                  priceUsd={selectedToken.price}
                   depositUsd={(parseFloat(amount) || 0) * (isDola(selectedToken.address) ? (stakingData.dolaPriceUsd || selectedToken.price || 1) : selectedToken.price)}
+                  estimatedOutput={ensoDepositRoute.isLoading ? '' : ensoDepositRoute.amountOut}
                 />
               )
                 :
                 !selectedToken.price && !isDola(selectedToken.address) && !isConnected && selectedToken.isIdleStable ? (
                   <SelectedOpportunity
-                    token={selectedToken}
+                    token={stakingData}
                     apy={stakingData.apy}
                     totalAssets={stakingData.totalAssets}
-                    dolaPriceUsd={stakingData.dolaPriceUsd ?? 1}
+                    priceUsd={selectedToken.price}
                     depositUsd={(parseFloat(amount) || 0) * 1}
+                    estimatedOutput={ensoDepositRoute.isLoading ? '' : ensoDepositRoute.amountOut}
                   />
                 ) :
                   ensoDepositRoute.isLoading ? (
