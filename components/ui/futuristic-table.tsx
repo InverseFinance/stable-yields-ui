@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { gaEvent, smartShortNumber } from "@/lib/utils";
+import { Swap } from '@/components/Swap'
 
 const projectImages = {
   'Frax': 'https://icons.llamao.fi/icons/protocols/frax?w=48&h=48',
@@ -143,64 +144,63 @@ export default function FuturisticTable({
                     const isTreasuryRow = showTreasuryLine && index === treasuryLineIndex;
                     const isRowBeforeTreasury = showTreasuryLine && index === treasuryLineIndex - 1;
                     return (
-                    <motion.tr
-                      key={index}
-                      className={`${isRowBeforeTreasury ? '' : 'table-border'} hover:bg-muted/50 transition`}
-                      style={isTreasuryRow ? { borderTop: '2px dashed oklch(0.554 0.046 257.417)' } : undefined}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: index * 0.1 }}
-                    >
-                      {columns.map((column, colIndex) => (
-                        <td
-                          className={`min-w-[125px] p-2 sm:p-3 text-primary-foreground text-sm sm:text-base lg:text-xl font-bold whitespace-nowrap ${
-                            item[column.key] === true || item[column.key] === 'fixed' ? 'text-green-400' : ''
-                          } ${isTreasuryRow && colIndex === 0 ? 'relative overflow-visible' : ''}`}
-                          key={column.key}
-                        >
-                          {isTreasuryRow && colIndex === 0 && (
-                            <span className="absolute top-0 -translate-y-1/2 z-20 text-[12px] sm:text-sm font-semibold whitespace-nowrap backdrop-blur-xl shadow-lg bg-container px-3 rounded text-muted-foreground">
-                              US Treasury Yield: <b>{usTreasuryYield.toFixed(2)}%</b>
-                            </span>
-                          )}
-                          {
-                            column.isCta ? (
-                              <button className="cta-button text-sm sm:text-base" onClick={() => handleCta(item)}>
-                                {column.ctaText}
-                              </button>
-                            ) : column.key === 'project' ? (
-                              <div className="flex items-center gap-2">
-                                <Image
-                                  className="rounded-full w-5 h-5 sm:w-7 sm:h-7"
-                                  src={projectImages[item["project"]] || `https://icons.llamao.fi/icons/protocols/${item["project"].toLowerCase().replace(/ /g, '-')}?w=48&h=48`}
-                                  alt={item['project']}
-                                  width={24}
-                                  height={24}
-                                />
-                                <span className="text-sm sm:text-base lg:text-lg">{item["projectLabel"]}</span>
-                              </div>
-                            ) : ['symbol', 'borrowToken'].includes(column.key) ? (
-                              <div className="flex items-center gap-2">
-                                <Image
-                                  className="rounded-full w-5 h-5 sm:w-7 sm:h-7"
-                                  src={item["image"]}
-                                  alt={item['symbol']}
-                                  width={24}
-                                  height={24}
-                                />
-                                <span className="text-sm sm:text-base lg:text-lg">{item[column.key]}</span>
-                              </div>
-                            ) : typeof item[column.key] === 'number' ?
-                                column.type === 'usd' ? `${smartShortNumber(item[column.key], 1, true, true)}` : `${item[column.key] ? (item[column.key]).toFixed(2)+'%' : '-'}` :
-                              typeof item[column.key] === 'string' ?
-                                (item[column.key].replace('fixed', 'Fixed').replace('variable', 'Variable') || '-') :
-                              typeof item[column.key] === 'boolean' ?
-                                item[column.key] ? 'Yes' : 'No' :
-                                item[column.key] || '-'
-                          }
-                        </td>
-                      ))}
-                    </motion.tr>
+                      <motion.tr
+                        key={index}
+                        className={`${isRowBeforeTreasury ? '' : 'table-border'} hover:bg-muted/50 transition`}
+                        style={isTreasuryRow ? { borderTop: '2px dashed oklch(0.554 0.046 257.417)' } : undefined}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: index * 0.1 }}
+                      >
+                        {columns.map((column, colIndex) => (
+                          <td
+                            className={`min-w-[125px] p-2 sm:p-3 text-primary-foreground text-sm sm:text-base lg:text-xl font-bold whitespace-nowrap ${item[column.key] === true || item[column.key] === 'fixed' ? 'text-green-400' : ''
+                              } ${isTreasuryRow && colIndex === 0 ? 'relative overflow-visible' : ''}`}
+                            key={column.key}
+                          >
+                            {isTreasuryRow && colIndex === 0 && (
+                              <span className="absolute top-0 -translate-y-1/2 z-20 text-[12px] sm:text-sm font-semibold whitespace-nowrap backdrop-blur-xl shadow-lg bg-container px-3 rounded text-muted-foreground">
+                                US Treasury Yield: <b>{usTreasuryYield.toFixed(2)}%</b>
+                              </span>
+                            )}
+                            {
+                              column.isCta ? (
+                                <button className="cta-button text-sm sm:text-base" onClick={() => handleCta(item)}>
+                                  {column.ctaText}
+                                </button>
+                              ) : column.key === 'project' ? (
+                                <div className="flex items-center gap-2">
+                                  <Image
+                                    className="rounded-full w-5 h-5 sm:w-7 sm:h-7"
+                                    src={projectImages[item["project"]] || `https://icons.llamao.fi/icons/protocols/${item["project"].toLowerCase().replace(/ /g, '-')}?w=48&h=48`}
+                                    alt={item['project']}
+                                    width={24}
+                                    height={24}
+                                  />
+                                  <span className="text-sm sm:text-base lg:text-lg">{item["projectLabel"]}</span>
+                                </div>
+                              ) : ['symbol', 'borrowToken'].includes(column.key) ? (
+                                <div className="flex items-center gap-2">
+                                  <Image
+                                    className="rounded-full w-5 h-5 sm:w-7 sm:h-7"
+                                    src={item["image"]}
+                                    alt={item['symbol']}
+                                    width={24}
+                                    height={24}
+                                  />
+                                  <span className="text-sm sm:text-base lg:text-lg">{item[column.key]}</span>
+                                </div>
+                              ) : typeof item[column.key] === 'number' ?
+                                column.type === 'usd' ? `${smartShortNumber(item[column.key], 1, true, true)}` : `${item[column.key] ? (item[column.key]).toFixed(2) + '%' : '-'}` :
+                                typeof item[column.key] === 'string' ?
+                                  (item[column.key].replace('fixed', 'Fixed').replace('variable', 'Variable') || '-') :
+                                  typeof item[column.key] === 'boolean' ?
+                                    item[column.key] ? 'Yes' : 'No' :
+                                    item[column.key] || '-'
+                            }
+                          </td>
+                        ))}
+                      </motion.tr>
                     );
                   })}
                 </tbody>
@@ -236,13 +236,18 @@ export default function FuturisticTable({
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-container p-4 sm:p-6 rounded-xl shadow-xl max-w-md mx-4"
+              className="bg-container p-4 sm:p-6 rounded-xl shadow-xl sm:w-xl max-w-md mx-4"
               onClick={(e) => e.stopPropagation()}
             >
               <h3 className="text-lg sm:text-xl font-bold text-foreground mb-4">External Link Disclaimer</h3>
-              <p className="text-sm sm:text-base text-muted-foreground mb-6">
+              {/* <p className="text-sm sm:text-base text-muted-foreground mb-6">
                 You are about to visit an external website. We are not affiliated with or responsible for the content on external sites and only provide a link for your convenience.
-              </p>
+              </p> */}
+              {
+                !!pendingItem && <div className="rounded-full">
+                  <Swap tokens={[pendingItem]} />
+                </div>
+              }
               <div className="flex gap-4 justify-end">
                 <button
                   onClick={handleDismiss}
