@@ -207,8 +207,6 @@ export default function FuturisticChart({ data }: { data: ChartData[] }) {
         });
     };
 
-    console.log(processedData);
-
     return (
         <motion.div
             className="bg-container backdrop-blur-lg rounded-2xl p-2 sm:p-4 shadow-xl"

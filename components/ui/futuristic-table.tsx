@@ -244,7 +244,7 @@ export default function FuturisticTable({
               className="bg-container p-4 sm:p-6 rounded-xl shadow-xl sm:w-xl max-w-lg mx-4"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-lg sm:text-xl font-bold text-foreground mb-4">Earn with {pendingItem?.symbol}</h3>
+              {/* <h3 className="text-lg sm:text-xl font-bold text-foreground mb-4">Earn with {pendingItem?.symbol}</h3> */}
               {/* <p className="text-sm sm:text-base text-muted-foreground mb-6">
                 You are about to visit an external website. We are not affiliated with or responsible for the content on external sites and only provide a link for your convenience.
               </p> */}
