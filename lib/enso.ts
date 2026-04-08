@@ -47,6 +47,8 @@ export async function fetchEnsoRoute(params: {
     tokenOut: [params.tokenOut ?? SDOLA_ADDRESS],
     amountIn: [params.amountIn],
     slippage: params.slippage ?? '10',
+    fee: [10],
+    feeReceiver: '0x926dF14a23BE491164dCF93f4c468A50ef659D5B',
   }));
 }
 
