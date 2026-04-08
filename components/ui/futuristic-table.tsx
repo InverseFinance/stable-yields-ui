@@ -254,7 +254,7 @@ export default function FuturisticTable({
                 <StakingCard stakingData={pendingItem ? pendingItem : sortedData[0]} tokenPrices={tokenPrices} />
               </div>
 
-              <div className="flex gap-4 justify-end">
+              <div className="flex gap-4 justify-end pt-3">
                 <button
                   onClick={handleDismiss}
                   className="cursor-pointer px-3 sm:px-4 py-2 text-sm sm:text-base text-muted-foreground hover:text-foreground transition"

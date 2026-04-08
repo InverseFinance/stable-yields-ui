@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { fetchEnsoRoute } from '@/lib/enso';
 import { isDola } from '@/lib/tokens';
+import { SDOLA_ADDRESS } from '@/lib/contracts';
 
 interface EnsoRouteResult {
   amountOut: string | null;
@@ -36,7 +37,7 @@ export function useEnsoRoute(
       return;
     }
     // For deposit flow (no explicit tokenOut): skip if tokenIn is DOLA
-    if (!tokenOut && isDola(tokenIn)) {
+    if (tokenOut === SDOLA_ADDRESS && isDola(tokenIn)) {
       setResult(EMPTY);
       return;
     }

@@ -86,6 +86,8 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
   const addRecentTransaction = useAddRecentTransaction();
   const { t } = useLanguage();
 
+  const isDolaToSDola = isDola(selectedToken.address) && ((stakingData?.zapAddress || stakingData?.address) === SDOLA_ADDRESS)
+
   // ── DOLA direct flow reads ──
 
   const { data: dolaBalance, refetch: refetchDola } = useReadContract({
@@ -120,7 +122,7 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
     functionName: 'balanceOf',
     args: address ? [address] : undefined,
     query: {
-      enabled: !!address && activeTab === 'stake' && !isDola(selectedToken.address) && !isNativeEth(selectedToken.address),
+      enabled: !!address && activeTab === 'stake' && !isDolaToSDola && !isNativeEth(selectedToken.address),
     },
   });
 
@@ -169,7 +171,7 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
 
   // ── Enso routes ──
 
-  const usingEnsoDeposit = activeTab === 'stake' && !isDola(selectedToken.address);
+  const usingEnsoDeposit = activeTab === 'stake' && !isDolaToSDola
   const usingEnsoWithdraw = activeTab === 'unstake' && !isDola(withdrawDestToken.address);
 
   const depositSlippage = slippageSetting === 'auto'
@@ -180,11 +182,14 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
     ? (withdrawDestToken.isStablish ? '3' : '30')
     : slippageSetting;
 
+  console.log(stakingData)
+
   const ensoDepositRoute = useEnsoRoute(
     usingEnsoDeposit ? selectedToken.address : undefined,
     amountInWei,
     address,
     depositSlippage,
+    stakingData?.zapAddress || stakingData?.address,
   );
 
   const ensoWithdrawRoute = useEnsoRoute(
@@ -388,7 +393,7 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
       ? ethBalanceData?.value
       : selectedTokenBalance;
 
-  const needsApproval = activeTab === 'stake' && isDola(selectedToken.address) && parsedAmount > 0n && (allowance ?? 0n) < parsedAmount;
+  const needsApproval = activeTab === 'stake' && parsedAmount > 0n && (allowance ?? 0n) < parsedAmount;
 
   const insufficientBalance = parsedAmount > 0n && (
     activeTab === 'stake'
@@ -628,12 +633,12 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
 
   return (
     <>
-    {showTosModal && <TermsModal onAccept={handleTosAccept} onClose={() => setShowTosModal(false)} />}
-    <div className="card-shine relative bg-card-bg border border-white/[0.05] rounded-2xl backdrop-blur-sm">
+      {showTosModal && <TermsModal onAccept={handleTosAccept} onClose={() => setShowTosModal(false)} />}
+      <div className="card-shine relative bg-card-bg border border-white/[0.05] rounded-2xl backdrop-blur-sm">
 
-      {/* Tabs */}
-      <div className="flex border-b border-white/[0.05]">
-        {/* {(['stake', 'unstake'] as Tab[]).map((tab) => (
+        {/* Tabs */}
+        <div className="flex border-b border-white/[0.05]">
+          {/* {(['stake', 'unstake'] as Tab[]).map((tab) => (
           <button
             key={tab}
             onClick={() => {
@@ -657,233 +662,231 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
           </button>
         ))} */}
 
-        {/* Slippage settings */}
-        <div className="relative flex items-center px-4" ref={slippageRef}>
-          <button
-            onClick={() => setShowSlippage(s => !s)}
-            className="flex items-center gap-1.5 text-text-muted hover:text-text-secondary transition-colors cursor-pointer"
-            title="Slippage settings"
-          >
-            {slippageSetting !== 'auto' && (
-              <span className="text-[11px] font-mono text-accent">
-                {SLIPPAGE_OPTIONS.find(o => o.value === slippageSetting)?.label}
-              </span>
-            )}
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="3" />
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-            </svg>
-          </button>
+          {/* Slippage settings */}
+          <div className="relative flex items-center px-4" ref={slippageRef}>
+            <button
+              onClick={() => setShowSlippage(s => !s)}
+              className="flex items-center gap-1.5 text-text-muted hover:text-text-secondary transition-colors cursor-pointer"
+              title="Slippage settings"
+            >
+              {slippageSetting !== 'auto' && (
+                <span className="text-[11px] font-mono text-accent">
+                  {SLIPPAGE_OPTIONS.find(o => o.value === slippageSetting)?.label}
+                </span>
+              )}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+            </button>
 
-          {showSlippage && (
-            <div className="absolute top-full right-0 z-20 mt-1 bg-card-bg border border-white/[0.08] rounded-xl p-3 shadow-xl w-64">
-              <div className="text-[10px] uppercase tracking-[0.15em] text-text-muted font-medium mb-2.5">
-                {t.slippageTolerance}
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                <button
-                  onClick={() => setSlippageSetting('auto')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                    slippageSetting === 'auto'
-                      ? 'bg-accent text-[#1A0E00]'
-                      : 'bg-white/[0.05] text-text-muted hover:text-text-secondary border border-white/[0.06]'
-                  }`}
-                >
-                  Auto
-                </button>
-                {SLIPPAGE_OPTIONS.map(opt => (
+            {showSlippage && (
+              <div className="absolute top-full right-0 z-20 mt-1 bg-card-bg border border-white/[0.08] rounded-xl p-3 shadow-xl w-64">
+                <div className="text-[10px] uppercase tracking-[0.15em] text-text-muted font-medium mb-2.5">
+                  {t.slippageTolerance}
+                </div>
+                <div className="flex flex-wrap gap-1.5">
                   <button
-                    key={opt.value}
-                    onClick={() => { setSlippageSetting(opt.value); setShowSlippage(false); }}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all cursor-pointer ${
-                      slippageSetting === opt.value
+                    onClick={() => setSlippageSetting('auto')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${slippageSetting === 'auto'
                         ? 'bg-accent text-[#1A0E00]'
                         : 'bg-white/[0.05] text-text-muted hover:text-text-secondary border border-white/[0.06]'
-                    }`}
+                      }`}
                   >
-                    {opt.label}
+                    Auto
                   </button>
-                ))}
+                  {SLIPPAGE_OPTIONS.map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={() => { setSlippageSetting(opt.value); setShowSlippage(false); }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all cursor-pointer ${slippageSetting === opt.value
+                          ? 'bg-accent text-[#1A0E00]'
+                          : 'bg-white/[0.05] text-text-muted hover:text-text-secondary border border-white/[0.06]'
+                        }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="px-5 pt-5 sm:px-6">
-        <div style={{ display: (activeTab === 'stake' ? 'block' : 'none') }}>
-          <SavingsOpportunites
-            apy={stakingData.apy}
-            totalAssets={stakingData.totalAssets}
-            tokens={sortedTokens}
-            onSelectToken={(t) => {
-              gaEvent({ action: 'select_idle_stable', params: { category: 'opportunities', label: t.symbol, value: Math.round(t.usd || 0) } });
-              setSelectedToken(t);
-              setAmount(maxAmounts[t.address.toLowerCase()] ?? '');
-            }}
-          />
-        </div>
-      </div>
-
-      <div className="px-5 pb-5 sm:px-6 sm:pb-6 space-y-3">
-        {/* Input container */}
-        <div className="bg-surface/50 border border-white/[0.04] rounded-xl p-4">
-          {/* Label + balance row */}
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-text-muted text-[10px] uppercase tracking-[0.15em] font-medium">
-              {activeTab === 'stake' ? t.youDeposit : t.youWithdraw}
-            </span>
-            {isConnected && (
-              <button
-                onClick={handleMax}
-                className="flex items-center gap-1 text-xs text-text-muted hover:text-text-secondary transition-colors duration-150 cursor-pointer group"
-              >
-                <span>{t.bal} </span>
-                <span className="font-mono">{balanceDisplay} {balanceLabel}</span>
-                <span className="text-accent font-semibold ml-1 group-hover:text-accent-hover transition-colors">{t.max}</span>
-              </button>
             )}
           </div>
+        </div>
 
-          {/* Amount + token selector row */}
-          <div className="flex items-center gap-3">
-            <input
-              type="number"
-              placeholder={'0.00'}
-              value={amount}
-              onChange={(e) => { setAmount(e.target.value); setIsMaxWithdraw(false); }}
-              disabled={ensoStep !== 'idle' || (activeTab === 'unstake' && balanceDisplay === '0')}
-              className="flex-1 min-w-0 bg-transparent text-2xl font-mono text-foreground placeholder:text-white/[0.15] focus:outline-none disabled:opacity-40 transition-opacity"
+        <div className="px-5 pt-5 sm:px-6">
+          <div style={{ display: (activeTab === 'stake' ? 'block' : 'none') }}>
+            <SavingsOpportunites
+              apy={stakingData.apy}
+              totalAssets={stakingData.totalAssets}
+              tokens={sortedTokens}
+              onSelectToken={(t) => {
+                gaEvent({ action: 'select_idle_stable', params: { category: 'opportunities', label: t.symbol, value: Math.round(t.usd || 0) } });
+                setSelectedToken(t);
+                setAmount(maxAmounts[t.address.toLowerCase()] ?? '');
+              }}
             />
-            {activeTab === 'stake' ? (
-              <TokenSelector
-                tokens={sortedTokens}
-                selected={selectedToken}
-                onSelect={(t) => { gaEvent({ action: 'select_token', params: { category: 'staking', label: t.symbol, value: 0 } }); setSelectedToken(t); if(!t.isIdleStable || !selectedToken.isIdleStable) setAmount(''); }}
-                balances={tokenBalances}
+          </div>
+        </div>
+
+        <div className="px-5 pb-5 sm:px-6 sm:pb-6 space-y-3">
+          {/* Input container */}
+          <div className="bg-surface/50 border border-white/[0.04] rounded-xl p-4">
+            {/* Label + balance row */}
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-text-muted text-[10px] uppercase tracking-[0.15em] font-medium">
+                {activeTab === 'stake' ? t.youDeposit : t.youWithdraw}
+              </span>
+              {isConnected && (
+                <button
+                  onClick={handleMax}
+                  className="flex items-center gap-1 text-xs text-text-muted hover:text-text-secondary transition-colors duration-150 cursor-pointer group"
+                >
+                  <span>{t.bal} </span>
+                  <span className="font-mono">{balanceDisplay} {balanceLabel}</span>
+                  <span className="text-accent font-semibold ml-1 group-hover:text-accent-hover transition-colors">{t.max}</span>
+                </button>
+              )}
+            </div>
+
+            {/* Amount + token selector row */}
+            <div className="flex items-center gap-3">
+              <input
+                type="number"
+                placeholder={'0.00'}
+                value={amount}
+                onChange={(e) => { setAmount(e.target.value); setIsMaxWithdraw(false); }}
+                disabled={ensoStep !== 'idle' || (activeTab === 'unstake' && balanceDisplay === '0')}
+                className="flex-1 min-w-0 bg-transparent text-2xl font-mono text-foreground placeholder:text-white/[0.15] focus:outline-none disabled:opacity-40 transition-opacity"
               />
-            ) : (
-              <div className="flex items-center gap-1.5 bg-white/[0.05] border border-white/[0.06] rounded-xl px-3 py-2 shrink-0">
-                <Image src={DOLA_TOKEN.logoUri} alt={DOLA_TOKEN.symbol} width={20} height={20} className="rounded-full" />
-                <span className="text-sm font-semibold text-text-muted">DOLA</span>
+              {activeTab === 'stake' ? (
+                <TokenSelector
+                  tokens={sortedTokens}
+                  selected={selectedToken}
+                  onSelect={(t) => { gaEvent({ action: 'select_token', params: { category: 'staking', label: t.symbol, value: 0 } }); setSelectedToken(t); if (!t.isIdleStable || !selectedToken.isIdleStable) setAmount(''); }}
+                  balances={tokenBalances}
+                />
+              ) : (
+                <div className="flex items-center gap-1.5 bg-white/[0.05] border border-white/[0.06] rounded-xl px-3 py-2 shrink-0">
+                  <Image src={DOLA_TOKEN.logoUri} alt={DOLA_TOKEN.symbol} width={20} height={20} className="rounded-full" />
+                  <span className="text-sm font-semibold text-text-muted">DOLA</span>
+                </div>
+              )}
+            </div>
+
+            {/* USD worth of input */}
+            {inputUsd > 0 && (
+              <div className="mt-1.5 text-text-muted text-xs font-mono">
+                ≈{formatUsd(inputUsd)}
+              </div>
+            )}
+
+            {/* Withdraw destination — inside the input zone */}
+            {activeTab === 'unstake' && (
+              <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/[0.04]">
+                <span className="text-text-muted text-[10px] uppercase tracking-[0.15em] font-medium">{t.toLabel}</span>
+                <TokenSelector
+                  tokens={sortedTokens}
+                  selected={withdrawDestToken}
+                  onSelect={(t) => {
+                    gaEvent({ action: 'select_withdraw_dest', params: { category: 'staking', label: t.symbol, value: 0 } });
+                    setWithdrawDestToken(t);
+                  }}
+                  balances={tokenBalances}
+                />
               </div>
             )}
           </div>
 
-          {/* USD worth of input */}
-          {inputUsd > 0 && (
-            <div className="mt-1.5 text-text-muted text-xs font-mono">
-              ≈{formatUsd(inputUsd)}
-            </div>
-          )}
-
-          {/* Withdraw destination — inside the input zone */}
-          {activeTab === 'unstake' && (
-            <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/[0.04]">
-              <span className="text-text-muted text-[10px] uppercase tracking-[0.15em] font-medium">{t.toLabel}</span>
-              <TokenSelector
-                tokens={sortedTokens}
-                selected={withdrawDestToken}
-                onSelect={(t) => {
-                  gaEvent({ action: 'select_withdraw_dest', params: { category: 'staking', label: t.symbol, value: 0 } });
-                  setWithdrawDestToken(t);
-                }}
-                balances={tokenBalances}
-              />
-            </div>
-          )}
-        </div>
-
-        {/* Preview — Deposit */}
-        {parsedAmount > 0n && activeTab === 'stake' && (
-          <div className="border border-white/[0.04] rounded-xl px-4 py-3">
-            {selectedToken.price || isDola(selectedToken.address) ? (
-              <SelectedOpportunity
-                token={selectedToken}
-                apy={stakingData.apy}
-                totalAssets={stakingData.totalAssets}
-                dolaPriceUsd={stakingData.dolaPriceUsd ?? 1}
-                depositUsd={(parseFloat(amount) || 0) * (isDola(selectedToken.address) ? (stakingData.dolaPriceUsd || selectedToken.price || 1) : selectedToken.price)}
-              />
-            )
-              :
-              !selectedToken.price && !isDola(selectedToken.address) && !isConnected && selectedToken.isIdleStable ? (
+          {/* Preview — Deposit */}
+          {parsedAmount > 0n && activeTab === 'stake' && (
+            <div className="border border-white/[0.04] rounded-xl px-4 py-3">
+              {selectedToken.price || isDola(selectedToken.address) ? (
                 <SelectedOpportunity
                   token={selectedToken}
                   apy={stakingData.apy}
                   totalAssets={stakingData.totalAssets}
                   dolaPriceUsd={stakingData.dolaPriceUsd ?? 1}
-                  depositUsd={(parseFloat(amount) || 0) * 1}
+                  depositUsd={(parseFloat(amount) || 0) * (isDola(selectedToken.address) ? (stakingData.dolaPriceUsd || selectedToken.price || 1) : selectedToken.price)}
                 />
-              ) :
-                ensoDepositRoute.isLoading ? (
+              )
+                :
+                !selectedToken.price && !isDola(selectedToken.address) && !isConnected && selectedToken.isIdleStable ? (
+                  <SelectedOpportunity
+                    token={selectedToken}
+                    apy={stakingData.apy}
+                    totalAssets={stakingData.totalAssets}
+                    dolaPriceUsd={stakingData.dolaPriceUsd ?? 1}
+                    depositUsd={(parseFloat(amount) || 0) * 1}
+                  />
+                ) :
+                  ensoDepositRoute.isLoading ? (
+                    <div className="flex justify-center py-0.5">
+                      <span className="inline-block w-4 h-4 border-2 border-accent/20 border-t-accent rounded-full animate-spin" />
+                    </div>
+                  ) : ensoDepositRoute.amountOut ? (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-text-muted">{t.estimatedOutput}</span>
+                      <span className="font-mono text-foreground">~{formatTokenAmount(ensoDepositRoute.amountOut, 18)} sDOLA</span>
+                    </div>
+                  ) : ensoDepositRoute.error ? (
+                    <div className="text-sm text-red-400 text-center">{ensoDepositRoute.error}</div>
+                  ) : null}
+            </div>
+          )}
+
+          {/* Preview — Withdraw */}
+          {activeTab === 'unstake' && sdolaWithdrawBN > 0n && !isDola(withdrawDestToken.address) && (
+            <div className="border border-white/[0.04] rounded-xl px-4 py-3">
+              {usingEnsoWithdraw ? (
+                ensoWithdrawRoute.isLoading ? (
                   <div className="flex justify-center py-0.5">
                     <span className="inline-block w-4 h-4 border-2 border-accent/20 border-t-accent rounded-full animate-spin" />
                   </div>
-                ) : ensoDepositRoute.amountOut ? (
-                  <div className="flex justify-between text-sm">
+                ) : ensoWithdrawRoute.amountOut ? (
+                  <div className="flex justify-between items-start text-sm">
                     <span className="text-text-muted">{t.estimatedOutput}</span>
-                    <span className="font-mono text-foreground">~{formatTokenAmount(ensoDepositRoute.amountOut, 18)} sDOLA</span>
-                  </div>
-                ) : ensoDepositRoute.error ? (
-                  <div className="text-sm text-red-400 text-center">{ensoDepositRoute.error}</div>
-                ) : null}
-          </div>
-        )}
-
-        {/* Preview — Withdraw */}
-        {activeTab === 'unstake' && sdolaWithdrawBN > 0n && !isDola(withdrawDestToken.address) && (
-          <div className="border border-white/[0.04] rounded-xl px-4 py-3">
-            {usingEnsoWithdraw ? (
-              ensoWithdrawRoute.isLoading ? (
-                <div className="flex justify-center py-0.5">
-                  <span className="inline-block w-4 h-4 border-2 border-accent/20 border-t-accent rounded-full animate-spin" />
-                </div>
-              ) : ensoWithdrawRoute.amountOut ? (
-                <div className="flex justify-between items-start text-sm">
-                  <span className="text-text-muted">{t.estimatedOutput}</span>
-                  <div className="text-right">
-                    <div className="font-mono text-foreground">
-                      ~{formatTokenAmount(ensoWithdrawRoute.amountOut, withdrawDestToken.decimals)} {withdrawDestToken.symbol}
-                    </div>
-                    {withdrawDestToken.price ? (
-                      <div className="text-text-muted text-xs">
-                        ~${(Number(formatUnits(BigInt(ensoWithdrawRoute.amountOut), withdrawDestToken.decimals)) * withdrawDestToken.price).toFixed(2)}
+                    <div className="text-right">
+                      <div className="font-mono text-foreground">
+                        ~{formatTokenAmount(ensoWithdrawRoute.amountOut, withdrawDestToken.decimals)} {withdrawDestToken.symbol}
                       </div>
-                    ) : null}
+                      {withdrawDestToken.price ? (
+                        <div className="text-text-muted text-xs">
+                          ~${(Number(formatUnits(BigInt(ensoWithdrawRoute.amountOut), withdrawDestToken.decimals)) * withdrawDestToken.price).toFixed(2)}
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
+                ) : ensoWithdrawRoute.error ? (
+                  <div className="text-sm text-red-400 text-center">{ensoWithdrawRoute.error}</div>
+                ) : null
+              ) : (
+                <div className="flex justify-between text-sm">
+                  <span className="text-text-muted">{t.youWillReceive}</span>
+                  <span className="font-mono text-foreground">
+                    {isMaxWithdraw ? `~${formatBalance(sdolaBalanceInDola ?? parsedAmount, 18, 2)}` : formatBalance(parsedAmount, 18, 2)} DOLA
+                  </span>
                 </div>
-              ) : ensoWithdrawRoute.error ? (
-                <div className="text-sm text-red-400 text-center">{ensoWithdrawRoute.error}</div>
-              ) : null
-            ) : (
-              <div className="flex justify-between text-sm">
-                <span className="text-text-muted">{t.youWillReceive}</span>
-                <span className="font-mono text-foreground">
-                  {isMaxWithdraw ? `~${formatBalance(sdolaBalanceInDola ?? parsedAmount, 18, 2)}` : formatBalance(parsedAmount, 18, 2)} DOLA
-                </span>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Action Button */}
-        <button
-          onClick={btn.onClick}
-          disabled={btn.disabled}
-          className={`w-full py-4 rounded-xl font-semibold text-sm tracking-wide transition-all duration-200 ${btn.disabled
-            ? 'bg-white/[0.04] text-text-muted cursor-not-allowed border border-white/[0.04]'
-            : 'btn-primary text-[#1A0E00] cursor-pointer'
-            }`}
-        >
-          {isPending && !btn.disabled && (
-            <span className="inline-block w-4 h-4 border-2 border-black/20 border-t-black/60 rounded-full animate-spin mr-2 align-middle" />
+              )}
+            </div>
           )}
-          {btn.text}
-        </button>
 
+          {/* Action Button */}
+          <button
+            onClick={btn.onClick}
+            disabled={btn.disabled}
+            className={`w-full py-4 rounded-xl font-semibold text-sm tracking-wide transition-all duration-200 ${btn.disabled
+              ? 'bg-white/[0.04] text-text-muted cursor-not-allowed border border-white/[0.04]'
+              : 'btn-primary text-[#1A0E00] cursor-pointer'
+              }`}
+          >
+            {isPending && !btn.disabled && (
+              <span className="inline-block w-4 h-4 border-2 border-black/20 border-t-black/60 rounded-full animate-spin mr-2 align-middle" />
+            )}
+            {btn.text}
+          </button>
+
+        </div>
       </div>
-    </div>
     </>
   );
 }

@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 const texts = [
   {
     "title": "Introduction and Agreement",
-    "text": `These Terms of Use ("Terms") constitute a binding agreement between you ("User" or "you") and the open-source contributors and community members (collectively, "Inverse Finance" "we," or the "DAO") who maintain the web interface located at earn.inverse.finance (the "Interface").`
+    "text": `These Terms of Use ("Terms") constitute a binding agreement between you ("User" or "you") and the open-source contributors and community members (collectively, "we") who maintain the web interface located at stableyields.info (the "Interface").`
   },
   {
     "warning": "By accessing the Interface, you acknowledge and agree that:"
@@ -43,11 +43,11 @@ const texts = [
   {
     "title": "The Interface vs. The Protocol",
     "subtitle": "The Protocol",
-    "text": `A set of immutable smart contracts running on a public blockchain. The DAO cannot "pause" or "reverse" the Protocol once deployed (unless specific governance parameters allow, which are also public).`
+    "text": `A set of immutable smart contracts running on a public blockchain, not maintained by the Interface developers.`
   },
   {
     "subtitle": "The Interface",
-    "text": "The website you are currently viewing. It is merely a visualizer that helps you format transactions. You can interact with the Protocol directly (e.g., via an explorer) without this Interface."
+    "text": "The website you are currently viewing. It is merely a visualizer that helps you format transactions. You can interact with the Protocols directly without this Interface."
   },
   {
     "subtitle": "Third-Party Dependencies",
@@ -106,11 +106,11 @@ const texts = [
     "text": "Applies to all legal theories including contract, tort, negligence, and strict liability."
   },
   {
-    "warning": "DAO participants are not personally liable and cannot be treated as a general partnership."
+    "warning": "Interface contributors or Protocol contriutors and DAO members if any are not personally liable and cannot be treated as a general partnership."
   },
   {
     "title": "Indemnification",
-    "text": "You agree to indemnify and hold harmless the DAO and its contributors from any claims, damages, or expenses arising from your use or violation of these Terms."
+    "text": "You agree to indemnify and hold harmless the DAOs and their contributors from any claims, damages, or expenses arising from your use or violation of these Terms."
   },
   {
     "title": "Dispute Resolution",
