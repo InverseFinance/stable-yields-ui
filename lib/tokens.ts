@@ -192,6 +192,14 @@ export const SUPPORTED_TOKENS: SupportedToken[] = [
     logoUri: 'https://assets.coingecko.com/coins/images/18834/small/wstETH.png',
     coingeckoId: 'wrapped-steth',
   },
+  {
+    address: '0x6440f144b7e50D6a8439336510312d2F54beB01D',
+    symbol: 'BOLD',
+    name: 'BOLD Stablecoin',
+    decimals: 18,
+    logoUri: 'https://assets.coingecko.com/coins/images/56069/standard/BOLD_logo.png?1748265087',
+    coingeckoId: 'liquity-bold-2',
+  },
 ];
 
 export function isDola(address: `0x${string}`): boolean {
