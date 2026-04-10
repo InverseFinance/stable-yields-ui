@@ -190,6 +190,26 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
     withdrawDestToken.address,
   );
 
+  // ── Enso allowance reads (to skip approval if already sufficient) ──
+
+  const ensoDepositSpender = ensoDepositRoute.tx?.to as `0x${string}` | undefined;
+  const { data: ensoDepositAllowance, refetch: refetchEnsoDepositAllowance } = useReadContract({
+    address: selectedToken.address as `0x${string}`,
+    abi: ERC20_ABI,
+    functionName: 'allowance',
+    args: address && ensoDepositSpender ? [address, ensoDepositSpender] : undefined,
+    query: { enabled: !!address && !!ensoDepositSpender && activeTab === 'stake' && !isNativeEth(selectedToken.address) },
+  });
+
+  const ensoWithdrawSpender = ensoWithdrawRoute.tx?.to as `0x${string}` | undefined;
+  const { data: ensoWithdrawAllowance, refetch: refetchEnsoWithdrawAllowance } = useReadContract({
+    address: SDOLA_ADDRESS,
+    abi: ERC20_ABI,
+    functionName: 'allowance',
+    args: address && ensoWithdrawSpender ? [address, ensoWithdrawSpender] : undefined,
+    query: { enabled: !!address && !!ensoWithdrawSpender && activeTab === 'unstake' },
+  });
+
   // ── DOLA direct flow writes ──
 
   const { writeContract: approve, data: approveTxHash, isPending: isApproving, reset: resetApprove } = useWriteContract();
@@ -326,6 +346,8 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
       const routeTx = activeTab === 'stake' ? ensoDepositRoute.tx : ensoWithdrawRoute.tx;
       if (routeTx) {
         resetEnsoApproval();
+        if (activeTab === 'stake') refetchEnsoDepositAllowance();
+        else refetchEnsoWithdrawAllowance();
         setEnsoStep('routing');
         sendRouteTx({
           to: routeTx.to as `0x${string}`,
@@ -494,25 +516,28 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
     }
 
     // ERC20: check if approval is needed
-    try {
-      const isUsdt = selectedToken.address.toLowerCase() === '0xdac17f958d2ee523a2206206994597c13d831ec7';
-      const approval = await fetchEnsoApproval({
-        fromAddress: address,
-        tokenAddress: selectedToken.address,
-        amount: isUsdt ? maxUint256.toString() : amountInWei,
-      });
-
-      if (approval.tx?.data && approval.tx.data !== '0x') {
-        setEnsoStep('approving');
-        sendApprovalTx({
-          to: approval.tx.to as `0x${string}`,
-          data: approval.tx.data as `0x${string}`,
-          value: BigInt(approval.tx.value || '0'),
+    const needsApprovalDeposit = ensoDepositAllowance === undefined || ensoDepositAllowance < BigInt(amountInWei);
+    if (needsApprovalDeposit) {
+      try {
+        const isUsdt = selectedToken.address.toLowerCase() === '0xdac17f958d2ee523a2206206994597c13d831ec7';
+        const approval = await fetchEnsoApproval({
+          fromAddress: address,
+          tokenAddress: selectedToken.address,
+          amount: isUsdt ? maxUint256.toString() : amountInWei,
         });
-        return;
+
+        if (approval.tx?.data && approval.tx.data !== '0x') {
+          setEnsoStep('approving');
+          sendApprovalTx({
+            to: approval.tx.to as `0x${string}`,
+            data: approval.tx.data as `0x${string}`,
+            value: BigInt(approval.tx.value || '0'),
+          });
+          return;
+        }
+      } catch (err) {
+        console.error('Approval check failed:', err);
       }
-    } catch (err) {
-      console.error('Approval check failed:', err);
     }
 
     // Already approved — send route directly
@@ -527,24 +552,27 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
   async function handleEnsoWithdraw() {
     if (!address || !ensoWithdrawRoute.tx) return;
 
-    try {
-      const approval = await fetchEnsoApproval({
-        fromAddress: address,
-        tokenAddress: SDOLA_ADDRESS,
-        amount: sdolaWithdrawAmountWei,
-      });
-
-      if (approval.tx?.data && approval.tx.data !== '0x') {
-        setEnsoStep('approving');
-        sendApprovalTx({
-          to: approval.tx.to as `0x${string}`,
-          data: approval.tx.data as `0x${string}`,
-          value: BigInt(approval.tx.value || '0'),
+    const needsApprovalWithdraw = ensoWithdrawAllowance === undefined || ensoWithdrawAllowance < BigInt(sdolaWithdrawAmountWei);
+    if (needsApprovalWithdraw) {
+      try {
+        const approval = await fetchEnsoApproval({
+          fromAddress: address,
+          tokenAddress: SDOLA_ADDRESS,
+          amount: sdolaWithdrawAmountWei,
         });
-        return;
+
+        if (approval.tx?.data && approval.tx.data !== '0x') {
+          setEnsoStep('approving');
+          sendApprovalTx({
+            to: approval.tx.to as `0x${string}`,
+            data: approval.tx.data as `0x${string}`,
+            value: BigInt(approval.tx.value || '0'),
+          });
+          return;
+        }
+      } catch (err) {
+        console.error('Withdrawal approval check failed:', err);
       }
-    } catch (err) {
-      console.error('Withdrawal approval check failed:', err);
     }
 
     setEnsoStep('routing');
