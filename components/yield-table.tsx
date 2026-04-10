@@ -4,6 +4,7 @@ import FuturisticTable from "./ui/futuristic-table";
 import FuturisticChart from "./ui/futuristic-chart";
 import { TokenPrices } from "@/lib/fetchTokenPrices";
 import { LanguageProvider } from "@/lib/useLanguage";
+import { UserPositions } from "./UserPositions";
 
 const COLUMNS = [
     {
@@ -68,6 +69,7 @@ export const YieldTable = ({
     return (
         <LanguageProvider>
             <div className="flex flex-col gap-8 w-full">
+                <UserPositions data={data} tokenPrices={tokenPrices} />
                 <FuturisticTable
                     tokenPrices={tokenPrices}
                     usTreasuryYield={usTreasuryYield}

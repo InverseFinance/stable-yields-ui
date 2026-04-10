@@ -18,6 +18,7 @@ export interface StakingData {
     zapDecimals: number;
     zapSymbol?: string;
     zapAddress?: string;
+    address?: string;
 }
 
 export interface ChartData {
