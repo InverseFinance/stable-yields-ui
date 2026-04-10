@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useLanguage } from '@/lib/useLanguage';
 
 
 export const TOS_VERSION ='stableyields-1.0.0';
@@ -197,7 +196,7 @@ export const TermsModal = ({ onAccept, onClose }: { onAccept: () => void; onClos
   const [checked, setChecked] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const { lang } = useLanguage();
+  const lang = 'en'
 
   async function handleAgree() {
     setIsSubmitting(true);
