@@ -5,7 +5,6 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { gaEvent, smartShortNumber } from "@/lib/utils";
-import { Swap } from '@/components/Swap'
 import { TokenPrices } from "@/lib/fetchTokenPrices";
 import { StakingCard } from '../StakingCard'
 
@@ -150,11 +149,14 @@ export default function FuturisticTable({
                     return (
                       <motion.tr
                         key={index}
-                        className={`${isRowBeforeTreasury ? '' : 'table-border'} hover:bg-muted/50 transition`}
+                        className={`${isRowBeforeTreasury ? '' : 'table-border'} hover:bg-muted/50 transition sm:cursor-default cursor-pointer`}
                         style={isTreasuryRow ? { borderTop: '2px dashed oklch(0.554 0.046 257.417)' } : undefined}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: index * 0.1 }}
+                        onClick={(e) => {
+                          if (window.innerWidth < 640) handleCta(item);
+                        }}
                       >
                         {columns.map((column, colIndex) => (
                           <td
@@ -241,7 +243,7 @@ export default function FuturisticTable({
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-container p-4 sm:p-6 rounded-xl shadow-xl sm:w-xl max-w-lg mx-4"
+              className="bg-container p-4 sm:p-6 sm:rounded-xl shadow-xl sm:w-xl sm:max-w-lg fixed inset-0 sm:relative sm:inset-auto overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               {/* <h3 className="text-lg sm:text-xl font-bold text-foreground mb-4">Earn with {pendingItem?.symbol}</h3> */}
@@ -250,7 +252,6 @@ export default function FuturisticTable({
               </p> */}
 
               <div className="rounded-full">
-                {/* <Swap tokens={pendingItem ? [pendingItem] : [sortedData[0]]} /> */}
                 <StakingCard stakingData={pendingItem ? pendingItem : sortedData[0]} tokenPrices={tokenPrices} />
               </div>
 
