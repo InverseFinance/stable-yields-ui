@@ -14,6 +14,10 @@ export interface StakingData {
     totalAssets: number;
     totalAssets30d: number;
     totalAssets90d: number;
+    decimals: number;
+    zapDecimals: number;
+    zapSymbol?: string;
+    zapAddress?: string;
 }
 
 export interface ChartData {

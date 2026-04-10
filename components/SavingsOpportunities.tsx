@@ -5,6 +5,8 @@ import { SupportedToken } from "@/lib/tokens"
 import { formatUsd, formatApy, formatTokenAmount } from '@/lib/utils';
 import { useLanguage } from '@/lib/useLanguage';
 import Image from 'next/image';
+import { StakingData } from '@/app/types';
+import { formatUnits } from 'viem';
 
 export const estimateOppurtunities = ({
     apy,
@@ -109,7 +111,7 @@ export const SelectedOpportunity = ({
     depositUsd,
     estimatedOutput,
 }: {
-    token: SupportedToken
+    token: StakingData
     apy: number
     totalAssets: number
     priceUsd: number
@@ -121,6 +123,10 @@ export const SelectedOpportunity = ({
     if (!depositUsd || depositUsd <= 0) return null;
 
     const depositDola = priceUsd ? depositUsd / priceUsd : depositUsd;
+    const decimals = (token.zapDecimals || token.decimals);
+    const outputFloat = estimatedOutput ? parseFloat(formatUnits(estimatedOutput, decimals)) : 0;
+    const outputUsd = outputFloat ? outputFloat * token.vaultPrice : 0;
+    
     const newTotalAssets = totalAssets + depositDola;
     const estimatedNewApy = totalAssets ? newTotalAssets ? apy * (totalAssets / newTotalAssets) : 0 : apy;
     const estimatedYearlyGain = estimatedNewApy / 100 * depositUsd;
@@ -145,7 +151,7 @@ export const SelectedOpportunity = ({
                     token.isVault && <span className="font-mono text-accent font-semibold text-xs gradient-text">{formatApy(estimatedNewApy)}</span>
                 }
                 <span className="font-mono text-success text-xs">+{formatUsd(estimatedYearlyGain)}/yr</span>
-                <span className="font-mono text-primary text-xs">{estimatedOutput ? `${formatTokenAmount(estimatedOutput, token.zapSymbol?.startsWith('aEth') ? 6 : (token.zapDecimals || token.decimals), 2)} ${token.zapSymbol || token.symbol}` : '-'}</span>
+                <span className="font-mono text-primary text-xs">{estimatedOutput ? `${formatTokenAmount(estimatedOutput, decimals, 2)} ${token.zapSymbol || token.symbol} (~${formatUsd(outputUsd, 2)})` : '-'}</span>
                 
             </div>
         </div>

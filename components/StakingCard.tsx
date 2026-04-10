@@ -798,16 +798,6 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
                 />
               )
                 :
-                !selectedToken.price && !isConnected && selectedToken.isIdleStable ? (
-                  <SelectedOpportunity
-                    token={stakingData}
-                    apy={stakingData.apy}
-                    totalAssets={stakingData.totalAssets}
-                    priceUsd={selectedToken.price}
-                    depositUsd={(parseFloat(amount) || 0) * 1}
-                    estimatedOutput={ensoDepositRoute.isLoading ? '' : ensoDepositRoute.amountOut}
-                  />
-                ) :
                   ensoDepositRoute.isLoading ? (
                     <div className="flex justify-center py-0.5">
                       <span className="inline-block w-4 h-4 border-2 border-accent/20 border-t-accent rounded-full animate-spin" />
@@ -815,7 +805,7 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
                   ) : ensoDepositRoute.amountOut ? (
                     <div className="flex justify-between text-sm">
                       <span className="text-text-muted">{t.estimatedOutput}</span>
-                      <span className="font-mono text-foreground">~{formatTokenAmount(ensoDepositRoute.amountOut, 18)} sDOLA</span>
+                      <span className="font-mono text-foreground">~{formatTokenAmount(ensoDepositRoute.amountOut, 18)} {stakingData?.zapSymbol || stakingData?.symbol}</span>
                     </div>
                   ) : ensoDepositRoute.error ? (
                     <div className="text-sm text-red-400 text-center">{ensoDepositRoute.error}</div>
