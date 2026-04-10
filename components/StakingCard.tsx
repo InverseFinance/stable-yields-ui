@@ -624,7 +624,7 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
   const outputFloat = estimatedOutput ? parseFloat(formatUnits(estimatedOutput, outputDecimals)) : 0;
   const outputUsd = outputFloat ? outputFloat * stakingData.vaultPrice : 0;
 
-  const worthDiff = depositUsd && outputUsd ? (depositUsd-outputUsd) / depositUsd : 0;
+  const worthDiff = depositUsd && outputUsd ? (depositUsd - outputUsd) / depositUsd : 0;
   const warnHighWorthDiff = worthDiff > 0.01;
   const blockHighWorthDiff = worthDiff > 0.05;
 
@@ -654,7 +654,13 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
                 : 'text-text-muted hover:text-text-secondary'
                 }`}
             >
-              {tab === 'stake' ? 'Earn with ' + stakingData.symbol : t.tabWithdraw}
+              <span className="inline-block">
+                <span className="flex flex-row gap-1">
+                  <p className="text text-sm">{tab === 'stake' ? 'Earn with ' : t.tabWithdraw}</p>
+                  <p className="font-bold">{stakingData.symbol}</p>
+                  <Image className="" src={stakingData.image} width={20} height={20} alt={stakingData.symbol} />
+                </span>
+              </span>
               {activeTab === tab && (
                 <span className="absolute bottom-0 left-1/4 right-1/4 h-px bg-gradient-to-r from-transparent via-accent to-transparent" />
               )}
@@ -812,18 +818,18 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
                 />
               )
                 :
-                  ensoDepositRoute.isLoading ? (
-                    <div className="flex justify-center py-0.5">
-                      <span className="inline-block w-4 h-4 border-2 border-accent/20 border-t-accent rounded-full animate-spin" />
-                    </div>
-                  ) : ensoDepositRoute.amountOut ? (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-text-muted">{t.estimatedOutput}</span>
-                      <span className="font-mono text-foreground">~{estimatedOutputFormatted} {stakingData?.zapSymbol || stakingData?.symbol}</span>
-                    </div>
-                  ) : ensoDepositRoute.error ? (
-                    <div className="text-sm text-red-400 text-center">{ensoDepositRoute.error}</div>
-                  ) : null}
+                ensoDepositRoute.isLoading ? (
+                  <div className="flex justify-center py-0.5">
+                    <span className="inline-block w-4 h-4 border-2 border-accent/20 border-t-accent rounded-full animate-spin" />
+                  </div>
+                ) : ensoDepositRoute.amountOut ? (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-text-muted">{t.estimatedOutput}</span>
+                    <span className="font-mono text-foreground">~{estimatedOutputFormatted} {stakingData?.zapSymbol || stakingData?.symbol}</span>
+                  </div>
+                ) : ensoDepositRoute.error ? (
+                  <div className="text-sm text-red-400 text-center">{ensoDepositRoute.error}</div>
+                ) : null}
             </div>
           )}
 
