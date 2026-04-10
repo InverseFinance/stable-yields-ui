@@ -807,6 +807,7 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
                   depositUsd={depositUsd}
                   estimatedOutputFormatted={estimatedOutputFormatted}
                   outputUsd={outputUsd}
+                  isConnected={isConnected}
                 />
               )
                 :

@@ -111,6 +111,7 @@ export const SelectedOpportunity = ({
     depositUsd,
     outputUsd,
     estimatedOutputFormatted,
+    isConnected,
 }: {
     token: StakingData
     apy: number
@@ -118,6 +119,7 @@ export const SelectedOpportunity = ({
     priceUsd: number
     depositUsd: number
     outputUsd: number
+    isConnected: boolean
     estimatedOutputFormatted: string
 }) => {
     const { t } = useLanguage();
@@ -140,7 +142,7 @@ export const SelectedOpportunity = ({
                     token.isVault && <span className="text-text-muted text-xs">{t.estApyAfterDeposit}</span>
                 }
                 <span className="text-text-muted text-xs">{t.estYearlyGains}</span>
-                <span className="text-text-muted text-xs">{t.estimatedOutput}</span>
+                {isConnected && <span className="text-text-muted text-xs">{t.estimatedOutput}</span>}
             </div>
             <div className="flex flex-col items-end gap-0.5">
                 {
@@ -150,8 +152,7 @@ export const SelectedOpportunity = ({
                     token.isVault && <span className="font-mono text-accent font-semibold text-xs gradient-text">{formatApy(estimatedNewApy)}</span>
                 }
                 <span className="font-mono text-success text-xs">+{formatUsd(estimatedYearlyGain)}/yr</span>
-                <span className="font-mono text-primary text-xs">{estimatedOutputFormatted ? `${estimatedOutputFormatted} ${token.zapSymbol || token.symbol} (~${formatUsd(outputUsd, 2)})` : '-'}</span>
-                
+                {isConnected && <span className="font-mono text-primary text-xs">{estimatedOutputFormatted ? `${estimatedOutputFormatted} ${token.zapSymbol || token.symbol} (~${formatUsd(outputUsd, 2)})` : '-'}</span>}
             </div>
         </div>
     );
