@@ -590,7 +590,7 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
           return { text: t.approving, onClick: () => { }, disabled: true };
         if (ensoStep === 'routing' || isEnsoRoutePending || isEnsoRouteConfirming)
           return { text: t.depositing, onClick: () => { }, disabled: true };
-        return { text: `Swap ${selectedToken.symbol} to ${stakingData?.zapSymbol || stakingData?.symbol}`, onClick: withTosCheck(handleEnsoDeposit), disabled: false };
+        return { text: `Swap ${selectedToken.symbol} to ${stakingData?.zapSymbol || stakingData?.symbol}`, onClick: withTosCheck(handleEnsoDeposit), disabled: blockHighWorthDiff };
       } else {
         if (isApproving || isApproveConfirming) return { text: t.approving, onClick: () => { }, disabled: true };
         if (needsApproval) return { text: t.approveDola, onClick: withTosCheck(handleApprove), disabled: false };
@@ -615,6 +615,17 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
     if (isRedeeming || isRedeemConfirming) return { text: t.withdrawing, onClick: () => { }, disabled: true };
     return { text: t.withdrawToDola, onClick: withTosCheck(handleRedeem), disabled: false };
   }
+
+  const depositUsd = selectedToken ? (parseFloat(amount) || 0) * selectedToken.price : 0;
+  const estimatedOutput = ensoDepositRoute.isLoading ? '' : ensoDepositRoute.amountOut;
+  const outputDecimals = stakingData ? stakingData?.zapDecimals || stakingData?.decimals : 18;
+  const estimatedOutputFormatted = estimatedOutput ? formatTokenAmount(estimatedOutput, outputDecimals) : '';
+  const outputFloat = estimatedOutput ? parseFloat(formatUnits(estimatedOutput, outputDecimals)) : 0;
+  const outputUsd = outputFloat ? outputFloat * stakingData.vaultPrice : 0;
+
+  const worthDiff = depositUsd && outputUsd ? (depositUsd-outputUsd) / depositUsd : 0;
+  const warnHighWorthDiff = worthDiff > 0.01;
+  const blockHighWorthDiff = worthDiff > 0.05;
 
   const btn = getButtonConfig();
 
@@ -793,8 +804,9 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
                   apy={stakingData.apy}
                   totalAssets={stakingData.totalAssets}
                   priceUsd={selectedToken.price}
-                  depositUsd={(parseFloat(amount) || 0) * selectedToken.price}
-                  estimatedOutput={ensoDepositRoute.isLoading ? '' : ensoDepositRoute.amountOut}
+                  depositUsd={depositUsd}
+                  estimatedOutputFormatted={estimatedOutputFormatted}
+                  outputUsd={outputUsd}
                 />
               )
                 :
@@ -805,7 +817,7 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
                   ) : ensoDepositRoute.amountOut ? (
                     <div className="flex justify-between text-sm">
                       <span className="text-text-muted">{t.estimatedOutput}</span>
-                      <span className="font-mono text-foreground">~{formatTokenAmount(ensoDepositRoute.amountOut, 18)} {stakingData?.zapSymbol || stakingData?.symbol}</span>
+                      <span className="font-mono text-foreground">~{estimatedOutputFormatted} {stakingData?.zapSymbol || stakingData?.symbol}</span>
                     </div>
                   ) : ensoDepositRoute.error ? (
                     <div className="text-sm text-red-400 text-center">{ensoDepositRoute.error}</div>

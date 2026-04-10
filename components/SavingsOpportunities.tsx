@@ -109,24 +109,23 @@ export const SelectedOpportunity = ({
     totalAssets,
     priceUsd,
     depositUsd,
-    estimatedOutput,
+    outputUsd,
+    estimatedOutputFormatted,
 }: {
     token: StakingData
     apy: number
     totalAssets: number
     priceUsd: number
     depositUsd: number
-    estimatedOutput: string
+    outputUsd: number
+    estimatedOutputFormatted: string
 }) => {
     const { t } = useLanguage();
 
     if (!depositUsd || depositUsd <= 0) return null;
 
     const depositDola = priceUsd ? depositUsd / priceUsd : depositUsd;
-    const decimals = (token.zapDecimals || token.decimals);
-    const outputFloat = estimatedOutput ? parseFloat(formatUnits(estimatedOutput, decimals)) : 0;
-    const outputUsd = outputFloat ? outputFloat * token.vaultPrice : 0;
-    
+
     const newTotalAssets = totalAssets + depositDola;
     const estimatedNewApy = totalAssets ? newTotalAssets ? apy * (totalAssets / newTotalAssets) : 0 : apy;
     const estimatedYearlyGain = estimatedNewApy / 100 * depositUsd;
@@ -151,7 +150,7 @@ export const SelectedOpportunity = ({
                     token.isVault && <span className="font-mono text-accent font-semibold text-xs gradient-text">{formatApy(estimatedNewApy)}</span>
                 }
                 <span className="font-mono text-success text-xs">+{formatUsd(estimatedYearlyGain)}/yr</span>
-                <span className="font-mono text-primary text-xs">{estimatedOutput ? `${formatTokenAmount(estimatedOutput, decimals, 2)} ${token.zapSymbol || token.symbol} (~${formatUsd(outputUsd, 2)})` : '-'}</span>
+                <span className="font-mono text-primary text-xs">{estimatedOutputFormatted ? `${estimatedOutputFormatted} ${token.zapSymbol || token.symbol} (~${formatUsd(outputUsd, 2)})` : '-'}</span>
                 
             </div>
         </div>
