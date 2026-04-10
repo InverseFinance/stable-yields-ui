@@ -119,7 +119,7 @@ export function ManagePositionModal({
 
   const outputFormatted = route.amountOut ? formatTokenAmount(route.amountOut, destToken.decimals) : '';
   const outputUsd = route.amountOut
-    ? Number(formatUnits(BigInt(route.amountOut), destToken.decimals)) * (destToken.vaultPrice || tokenPrices[destToken.address.toLowerCase()] ?? 0)
+    ? Number(formatUnits(BigInt(route.amountOut), destToken.decimals)) * (((destToken.vaultPrice || tokenPrices[destToken.address.toLowerCase()]) ?? 0))
     : 0;
 
   const inputUsd = currentSourcePos.usdValue > 0 && parseFloat(amount) > 0
