@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSendTransaction, useWaitForTransactionReceipt } from 'wagmi';
+import { useSendTransaction, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
 import { parseUnits, formatUnits } from 'viem';
 import { SUPPORTED_TOKENS, type SupportedToken } from '@/lib/tokens';
 import { type TokenPrices } from '@/lib/fetchTokenPrices';
@@ -9,6 +9,7 @@ import { type StakingData } from '@/app/types';
 import { type VaultPosition } from './UserPositions';
 import { useEnsoRoute } from '@/hooks/useEnsoRoute';
 import { fetchEnsoApproval } from '@/lib/enso';
+import { ERC20_ABI } from '@/lib/contracts';
 import { TokenSelector, type TokenMeta } from './TokenSelector';
 import { formatUsd, formatTokenAmount, smartShortNumber } from '@/lib/utils';
 import { addTxToast } from '@/lib/toastStore';
@@ -117,6 +118,15 @@ export function ManagePositionModal({
 
   const route = useEnsoRoute(sourceToken.address, amountWei, address, '50', destToken.address);
 
+  const spender = route.tx?.to as `0x${string}` | undefined;
+  const { data: currentAllowance, refetch: refetchAllowance } = useReadContract({
+    address: sourceToken.address as `0x${string}`,
+    abi: ERC20_ABI,
+    functionName: 'allowance',
+    args: spender ? [address, spender] : undefined,
+    query: { enabled: !!spender },
+  });
+
   const outputFormatted = route.amountOut ? formatTokenAmount(route.amountOut, destToken.decimals) : '';
   const outputUsd = route.amountOut
     ? Number(formatUnits(BigInt(route.amountOut), destToken.decimals)) * (((destToken.vaultPrice || tokenPrices[destToken.address.toLowerCase()]) ?? 0))
@@ -155,6 +165,7 @@ export function ManagePositionModal({
   useEffect(() => {
     if (ensoStep === 'approving' && isApprovalConfirmed && route.tx) {
       resetApproval();
+      refetchAllowance();
       setEnsoStep('routing');
       sendRouteTx({ to: route.tx.to as `0x${string}`, data: route.tx.data as `0x${string}`, value: BigInt(route.tx.value || '0') });
     }
@@ -174,14 +185,17 @@ export function ManagePositionModal({
 
   async function handleSwap() {
     if (!route.tx || !amount) return;
-    try {
-      const approval = await fetchEnsoApproval({ fromAddress: address, tokenAddress: sourceToken.address, amount: amountWei });
-      if (approval.tx?.data && approval.tx.data !== '0x') {
-        setEnsoStep('approving');
-        sendApprovalTx({ to: approval.tx.to as `0x${string}`, data: approval.tx.data as `0x${string}`, value: BigInt(approval.tx.value || '0') });
-        return;
-      }
-    } catch (err) { console.error('Approval check failed:', err); }
+    const needsApproval = currentAllowance === undefined || currentAllowance < BigInt(amountWei);
+    if (needsApproval) {
+      try {
+        const approval = await fetchEnsoApproval({ fromAddress: address, tokenAddress: sourceToken.address, amount: amountWei });
+        if (approval.tx?.data && approval.tx.data !== '0x') {
+          setEnsoStep('approving');
+          sendApprovalTx({ to: approval.tx.to as `0x${string}`, data: approval.tx.data as `0x${string}`, value: BigInt(approval.tx.value || '0') });
+          return;
+        }
+      } catch (err) { console.error('Approval check failed:', err); }
+    }
     setEnsoStep('routing');
     sendRouteTx({ to: route.tx.to as `0x${string}`, data: route.tx.data as `0x${string}`, value: BigInt(route.tx.value || '0') });
   }
