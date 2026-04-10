@@ -235,7 +235,7 @@ export default function FuturisticTable({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-background/50 backdrop-blur-sm flex items-center justify-center z-50"
+            className="fixed inset-0 bg-background/50 backdrop-blur-sm flex items-end sm:items-center justify-center z-50"
             onClick={handleDismiss}
             style={{ display: showModal ? 'flex' : 'none' }}
           >
@@ -243,7 +243,7 @@ export default function FuturisticTable({
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-container p-4 sm:p-6 sm:rounded-xl shadow-xl sm:w-xl sm:max-w-lg fixed inset-0 sm:relative sm:inset-auto overflow-y-auto"
+              className="bg-container p-4 sm:p-6 rounded-t-2xl sm:rounded-xl shadow-xl w-full sm:w-xl sm:max-w-lg max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               {/* <h3 className="text-lg sm:text-xl font-bold text-foreground mb-4">Earn with {pendingItem?.symbol}</h3> */}

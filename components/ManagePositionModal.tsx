@@ -14,6 +14,7 @@ import { formatUsd, formatTokenAmount, smartShortNumber } from '@/lib/utils';
 import { addTxToast } from '@/lib/toastStore';
 import { useAddRecentTransaction } from '@rainbow-me/rainbowkit';
 import { SelectedOpportunity } from './SavingsOpportunities';
+import { WorthDiffWarning } from './WorthDiffWarning';
 
 type EnsoStep = 'idle' | 'approving' | 'routing';
 
@@ -185,13 +186,16 @@ export function ManagePositionModal({
     sendRouteTx({ to: route.tx.to as `0x${string}`, data: route.tx.data as `0x${string}`, value: BigInt(route.tx.value || '0') });
   }
 
-  const btnDisabled = isPending || !amount || amountWei === '0' || !route.tx || route.isLoading;
+  const worthDiff = inputUsd && outputUsd ? (inputUsd - outputUsd) / inputUsd : 0;
+  const warnHighWorthDiff = worthDiff > 0.01;
+  const blockHighWorthDiff = worthDiff > 0.05;
+
+  const btnDisabled = isPending || !amount || amountWei === '0' || !route.tx || route.isLoading || blockHighWorthDiff;
   const btnText =
     ensoStep === 'approving' ? 'Approving…' :
-    ensoStep === 'routing' ? 'Swapping…' :
-    route.isLoading ? 'Fetching route…' :
-    `Swap to ${destToken.symbol}`;
-
+      ensoStep === 'routing' ? 'Swapping…' :
+        route.isLoading ? 'Fetching route…' :
+          `Swap to ${destToken.symbol}`;
 
   return (
     <div
@@ -199,7 +203,7 @@ export function ManagePositionModal({
       onClick={onDismiss}
     >
       <div
-        className="bg-container w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-xl"
+        className="bg-container w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-xl max-h-[90vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -290,7 +294,7 @@ export function ManagePositionModal({
                   outputUsd={outputUsd}
                   estimatedOutputFormatted={outputFormatted}
                   isConnected={true}
-                 /> : <div className="flex justify-between items-start text-sm">
+                /> : <div className="flex justify-between items-start text-sm">
                   <span className="text-text-muted">Estimated output</span>
                   <div className="text-right">
                     <div className="font-mono text-foreground">~{outputFormatted} {destToken.symbol}</div>
@@ -303,15 +307,16 @@ export function ManagePositionModal({
             </div>
           )}
 
+          <WorthDiffWarning warnHighWorthDiff={warnHighWorthDiff} blockHighWorthDiff={blockHighWorthDiff} />
+
           {/* Action button */}
           <button
             onClick={handleSwap}
             disabled={btnDisabled}
-            className={`w-full py-4 rounded-xl font-semibold text-sm tracking-wide transition-all duration-200 ${
-              btnDisabled
+            className={`w-full py-4 rounded-xl font-semibold text-sm tracking-wide transition-all duration-200 ${btnDisabled
                 ? 'bg-white/[0.04] text-text-muted cursor-not-allowed border border-white/[0.04]'
                 : 'btn-primary text-[#1A0E00] cursor-pointer'
-            }`}
+              }`}
           >
             {isPending && (
               <span className="inline-block w-4 h-4 border-2 border-black/20 border-t-black/60 rounded-full animate-spin mr-2 align-middle" />

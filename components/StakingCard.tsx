@@ -17,6 +17,7 @@ import { addTxToast } from '@/lib/toastStore';
 import { useLanguage } from '@/lib/useLanguage';
 import { type TokenPrices } from '@/lib/fetchTokenPrices';
 import { TermsModal, TOS_STORAGE_KEY } from './TermsOfServices';
+import { WorthDiffWarning } from './WorthDiffWarning';
 import { StakingData } from '@/app/types';
 
 type Tab = 'stake' | 'unstake';
@@ -863,16 +864,7 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
           )}
 
           {/* Worth diff warnings */}
-          {blockHighWorthDiff && (
-            <div className="mb-3 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
-              There seems to be an issue: output worth is too low compared to deposit worth.
-            </div>
-          )}
-          {warnHighWorthDiff && !blockHighWorthDiff && (
-            <div className="mb-3 px-4 py-3 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-sm">
-              Output worth is quite low compared to deposit worth. It is not recommended to proceed.
-            </div>
-          )}
+          <WorthDiffWarning warnHighWorthDiff={warnHighWorthDiff} blockHighWorthDiff={blockHighWorthDiff} />
 
           {/* Action Button */}
           <button
