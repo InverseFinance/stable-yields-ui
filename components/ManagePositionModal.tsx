@@ -22,7 +22,7 @@ function positionToToken(pos: VaultPosition): SupportedToken {
   return {
     address: pos.tokenAddress,
     symbol: pos.stakingData.zapSymbol || pos.stakingData.symbol,
-    name: `${pos.stakingData.symbol} · ${pos.stakingData.project}`,
+    name: `${pos.stakingData.project}`,
     decimals: pos.decimals,
     logoUri: pos.stakingData.image,
     usd: pos.usdValue,
@@ -48,7 +48,7 @@ function buildDestTokens(
     yieldTokens.push({
       address: addr as `0x${string}`,
       symbol: item.zapSymbol || item.symbol,
-      name: `${item.symbol} · ${item.project}`,
+      name: `${item.project}`,
       decimals: item.zapDecimals || item.decimals,
       logoUri: item.image,
       usd: 0,
@@ -92,7 +92,8 @@ export function ManagePositionModal({
   const [amount, setAmount] = useState('');
   const [ensoStep, setEnsoStep] = useState<EnsoStep>('idle');
 
-  const { tokens: destTokens, metaMap: destMeta } = buildDestTokens(yieldData, tokenPrices);
+  const { tokens: allDestTokens, metaMap: destMeta } = buildDestTokens(yieldData, tokenPrices);
+  const destTokens = allDestTokens.filter(t => t.address.toLowerCase() !== sourceToken.address.toLowerCase());
   const [destToken, setDestToken] = useState<SupportedToken>(() => {
     return destTokens.find(t => t.address.toLowerCase() === USDC_ADDRESS.toLowerCase()) ?? destTokens[0];
   });
@@ -232,7 +233,16 @@ export function ManagePositionModal({
               <TokenSelector
                 tokens={sourceTokens}
                 selected={sourceToken}
-                onSelect={t => { setSourceToken(t); setAmount(''); }}
+                onSelect={t => {
+                  setSourceToken(t);
+                  setAmount('');
+                  // If current dest is the new source, reset dest to USDC (or first available)
+                  if (destToken.address.toLowerCase() === t.address.toLowerCase()) {
+                    const next = allDestTokens.find(d => d.address.toLowerCase() !== t.address.toLowerCase() && d.address.toLowerCase() === USDC_ADDRESS.toLowerCase())
+                      ?? allDestTokens.find(d => d.address.toLowerCase() !== t.address.toLowerCase());
+                    if (next) setDestToken(next);
+                  }
+                }}
                 balances={sourceBals}
                 metadata={sourceMeta}
                 type={'vaultExit'}
