@@ -1,4 +1,4 @@
-export interface YieldData {
+export interface StakingData {
     symbol: string;
     project: string;
     apy: number;
@@ -10,6 +10,10 @@ export interface YieldData {
     image: string;
     isVault?: boolean;
     pool?: string;
+    vaultPrice: number;
+    totalAssets: number;
+    totalAssets30d: number;
+    totalAssets90d: number;
 }
 
 export interface ChartData {

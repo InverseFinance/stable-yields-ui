@@ -17,16 +17,7 @@ import { addTxToast } from '@/lib/toastStore';
 import { useLanguage } from '@/lib/useLanguage';
 import { type TokenPrices } from '@/lib/fetchTokenPrices';
 import { TermsModal, TOS_STORAGE_KEY } from './TermsOfServices';
-
-export interface StakingData {
-  apy: number;
-  projectedApy: number;
-  apy30d: number;
-  tvlUsd: number;
-  totalAssets: number;
-  totalAssets30d: number;
-  dolaPriceUsd: number;
-}
+import { StakingData } from '@/app/types';
 
 type Tab = 'stake' | 'unstake';
 type EnsoStep = 'idle' | 'approving' | 'routing';

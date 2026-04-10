@@ -1,5 +1,5 @@
 'use client';
-import { ChartData, YieldData } from "@/app/types";
+import { ChartData, StakingData } from "@/app/types";
 import FuturisticTable from "./ui/futuristic-table";
 import FuturisticChart from "./ui/futuristic-chart";
 import { TokenPrices } from "@/lib/fetchTokenPrices";
@@ -59,7 +59,7 @@ export const YieldTable = ({
     usTreasuryYield,
     tokenPrices,
 }: {
-    data: YieldData[];
+    data: StakingData[];
     chartData: ChartData[];
     timestamp: number;
     usTreasuryYield: number;

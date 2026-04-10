@@ -1,6 +1,5 @@
 import { YieldTable } from "@/components/yield-table";
-import { YieldData } from "../types";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { StakingData } from "../types";
 import { fetchTokenPrices } from "@/lib/fetchTokenPrices";
 
 export const revalidate = 300;
@@ -17,8 +16,8 @@ export default async function YieldsPage() {
   const usTreasuryData = usTreasuryRes.status === 'fulfilled' ? await usTreasuryRes.value.json() : { data: [] };
   const usTreasuryYield = usTreasuryData?.data?.length > 0 ? usTreasuryData.data[usTreasuryData.data.length - 1]?.BC_1MONTH : 0;
   // const data = await fetch(`http://localhost:3000/api/dola/sdola-comparator?v=2`);
-  const rates = json.rates.filter((r: YieldData) => !['sDAI'].includes(r.symbol));
-  const chartResults = await Promise.allSettled(rates.map(async (r: YieldData) => {
+  const rates = json.rates.filter((r: StakingData) => !['sDAI'].includes(r.symbol));
+  const chartResults = await Promise.allSettled(rates.map(async (r: StakingData) => {
     if (!r.pool) return [];
     const data = await fetch(`https://yields.llama.fi/chart/${r.pool}`);
     const chartResult = await data.json();
@@ -64,7 +63,7 @@ export default async function YieldsPage() {
           tokenPrices={tokenPrices}
           usTreasuryYield={usTreasuryYield}
           chartData={chartData}
-          data={rates.map((r: YieldData, index: number) => ({
+          data={rates.map((r: StakingData, index: number) => ({
             ...r,
             project: r.project.replace('FiRM', 'Inverse').replace(/fx-protocol/, '(fx) Protocol'),
             projectLabel: r.project.replace('FiRM', 'Inverse').replace(/fx-protocol/ig, 'f(x) Protocol'),
