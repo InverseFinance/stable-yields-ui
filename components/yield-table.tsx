@@ -68,7 +68,7 @@ export const YieldTable = ({
 }) => {
     return (
         <LanguageProvider>
-            <div className="flex flex-col gap-8 w-full">
+            <div className="flex flex-col gap-8 w-full px-3 sm:px-0">
                 <UserPositions data={data} tokenPrices={tokenPrices} />
                 <FuturisticTable
                     tokenPrices={tokenPrices}
