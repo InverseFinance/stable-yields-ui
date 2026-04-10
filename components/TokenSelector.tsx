@@ -2,17 +2,24 @@
 
 import { useState, useRef, useEffect } from 'react';
 import type { SupportedToken } from '@/lib/tokens';
-import { formatUsd } from '@/lib/utils';
+import { formatUsd, smartShortNumber } from '@/lib/utils';
 import Image from 'next/image';
+
+export interface TokenMeta {
+  apy?: number;
+  tvl?: number;
+}
 
 interface TokenSelectorProps {
   tokens: SupportedToken[];
   selected: SupportedToken;
+  type?: 'vaultExit'
   onSelect: (token: SupportedToken) => void;
   balances?: Record<string, string>;
+  metadata?: Record<string, TokenMeta>; // keyed by lowercase address
 }
 
-export function TokenSelector({ tokens, selected, onSelect, balances }: TokenSelectorProps) {
+export function TokenSelector({ tokens, type, selected, onSelect, balances, metadata }: TokenSelectorProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const ref = useRef<HTMLDivElement>(null);
@@ -80,20 +87,32 @@ export function TokenSelector({ tokens, selected, onSelect, balances }: TokenSel
                 <Image src={token.logoUri} alt={token.symbol} width={28} height={28} className="rounded-full shrink-0" />
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-semibold text-foreground">{token.symbol}</div>
-                  <div className="text-xs text-text-muted truncate">{token.name}</div>
+                  <div className="text-xs text-muted-foreground truncate">{token.name}</div>
                 </div>
-                {balances?.[token.address.toLowerCase()] && (
-                  <div className="flex flex-col items-end gap-0.5 shrink-0">
-                    <span className="text-xs font-mono text-text-secondary">
-                      {balances[token.address.toLowerCase()]}
+                <div className="flex flex-col items-end gap-0.5 shrink-0">
+                  {type !== 'vaultExit' && metadata?.[token.address.toLowerCase()]?.apy != null && (
+                    <span className="text-xs font-medium text-green-400">
+                      {metadata[token.address.toLowerCase()].apy!.toFixed(2)}% APY
                     </span>
-                    {token.usd ? (
-                      <span className="text-xs font-mono text-text-muted">
-                        {token.usd < 1 ? '<$1' : formatUsd(token.usd)}
+                  )}
+                  {type !== 'vaultExit' && metadata?.[token.address.toLowerCase()]?.tvl != null && (
+                    <div className="text-xs text-muted-foreground">
+                      {smartShortNumber(metadata[token.address.toLowerCase()].tvl!, 1, true)} TVL
+                    </div>
+                  )}
+                  {balances?.[token.address.toLowerCase()] && (
+                    <>
+                      <span className="text-xs font-mono text-text-secondary">
+                        {balances[token.address.toLowerCase()]}
                       </span>
-                    ) : null}
-                  </div>
-                )}
+                      {token.usd ? (
+                        <span className="text-xs font-mono text-text-muted">
+                          {token.usd < 1 ? '<$1' : formatUsd(token.usd)}
+                        </span>
+                      ) : null}
+                    </>
+                  )}
+                </div>
               </button>
             ))}
           </div>

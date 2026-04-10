@@ -82,7 +82,7 @@ export function UserPositions({
       <div className="w-full">
         <h2 className="text-lg font-semibold text-foreground mb-3">Your Positions</h2>
         {isLoading ? (
-          <div className="text-text-muted text-sm">Loading positions…</div>
+          <div className="text-muted-foreground text-sm">Loading positions…</div>
         ) : (
           <div className="flex flex-col gap-2">
             {positions.map(pos => (
@@ -101,15 +101,15 @@ export function UserPositions({
                   <div className="min-w-0">
                     <div className="font-semibold text-foreground text-sm truncate">
                       {pos.stakingData.zapSymbol || pos.stakingData.symbol}
-                      <span className="text-text-muted font-normal ml-1 text-xs">
+                      <span className="text-muted-foreground font-normal ml-1 text-xs">
                         ({pos.stakingData.project})
                       </span>
                     </div>
-                    <div className="text-xs text-text-muted">
+                    <div className="text-xs text-muted-foreground">
                       {pos.balance < 0.0001 ? '<0.0001' : pos.balance.toFixed(4)} tokens
                     </div>
                     {/* Mobile-only USD row */}
-                    <div className="text-xs text-text-muted sm:hidden mt-0.5">
+                    <div className="text-xs text-muted-foreground sm:hidden mt-0.5">
                       {formatUsd(pos.usdValue)} · <span className="text-green-400">+{formatUsd(pos.estimatedYearlyYield)}/yr</span>
                     </div>
                   </div>
@@ -118,15 +118,15 @@ export function UserPositions({
                 <div className="flex items-center gap-6 shrink-0">
                   <div className="text-right hidden sm:block">
                     <div className="text-sm font-semibold text-foreground">{formatUsd(pos.usdValue)}</div>
-                    <div className="text-xs text-text-muted">Value</div>
+                    <div className="text-xs text-muted-foreground">Value</div>
                   </div>
                   <div className="text-right hidden sm:block">
                     <div className="text-sm font-semibold text-green-400">+{formatUsd(pos.estimatedYearlyYield)}/yr</div>
-                    <div className="text-xs text-text-muted">{pos.stakingData.apy.toFixed(2)}% APY</div>
+                    <div className="text-xs text-muted-foreground">{pos.stakingData.apy.toFixed(2)}% APY</div>
                   </div>
                   <button
                     onClick={() => setManagingPosition(pos)}
-                    className="cursor-pointer px-4 py-2 text-sm font-medium bg-white/[0.06] hover:bg-white/[0.09] border border-white/[0.07] rounded-xl transition-all"
+                    className="cta-button text-sm"
                   >
                     Manage
                   </button>
