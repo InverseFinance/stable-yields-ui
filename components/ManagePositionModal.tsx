@@ -13,6 +13,7 @@ import { TokenSelector, type TokenMeta } from './TokenSelector';
 import { formatUsd, formatTokenAmount, smartShortNumber } from '@/lib/utils';
 import { addTxToast } from '@/lib/toastStore';
 import { useAddRecentTransaction } from '@rainbow-me/rainbowkit';
+import { SelectedOpportunity } from './SavingsOpportunities';
 
 type EnsoStep = 'idle' | 'approving' | 'routing';
 
@@ -33,9 +34,9 @@ function positionToToken(pos: VaultPosition): SupportedToken {
 function buildDestTokens(
   yieldData: StakingData[],
   tokenPrices: TokenPrices,
-): { tokens: SupportedToken[]; metaMap: Record<string, TokenMeta> } {
+): { tokens: StakingData[]; metaMap: Record<string, TokenMeta> } {
   const metaMap: Record<string, TokenMeta> = {};
-  const yieldTokens: SupportedToken[] = [];
+  const yieldTokens: StakingData[] = [];
   const yieldAddresses = new Set<string>();
 
   for (const item of yieldData) {
@@ -53,6 +54,10 @@ function buildDestTokens(
       logoUri: item.image,
       usd: 0,
       coingeckoId: '',
+      totalAssets: item.totalAssets,
+      vaultPrice: item.vaultPrice,
+      apy: item.apy,
+      isVault: item.isVault,
     });
   }
 
@@ -113,7 +118,7 @@ export function ManagePositionModal({
 
   const outputFormatted = route.amountOut ? formatTokenAmount(route.amountOut, destToken.decimals) : '';
   const outputUsd = route.amountOut
-    ? Number(formatUnits(BigInt(route.amountOut), destToken.decimals)) * (tokenPrices[destToken.address.toLowerCase()] ?? 0)
+    ? Number(formatUnits(BigInt(route.amountOut), destToken.decimals)) * (destToken.vaultPrice || tokenPrices[destToken.address.toLowerCase()] ?? 0)
     : 0;
 
   const inputUsd = currentSourcePos.usdValue > 0 && parseFloat(amount) > 0
@@ -187,7 +192,6 @@ export function ManagePositionModal({
     route.isLoading ? 'Fetching route…' :
     `Swap to ${destToken.symbol}`;
 
-  const destApyTvl = destMeta[destToken.address.toLowerCase()];
 
   return (
     <div
@@ -210,7 +214,7 @@ export function ManagePositionModal({
 
             {/* YOU SWAP row */}
             <div className="flex items-center justify-between mb-3">
-              <span className="text-text-muted text-[10px] uppercase tracking-[0.15em] font-medium">Exit From</span>
+              <span className="text-text-muted text-[10px] uppercase tracking-[0.15em] font-medium">Withdraw From</span>
               <button
                 onClick={() => setAmount(maxAmount)}
                 className="flex items-center gap-1 text-xs text-text-muted hover:text-text-secondary transition-colors cursor-pointer group"
@@ -257,12 +261,6 @@ export function ManagePositionModal({
             <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/[0.04]">
               <div>
                 <span className="text-text-muted text-[10px] uppercase tracking-[0.15em] font-medium">To</span>
-                {destApyTvl?.apy != null && (
-                  <span className="ml-2 text-xs text-green-400 font-medium">{destApyTvl.apy.toFixed(2)}% APY</span>
-                )}
-                {destApyTvl?.tvl != null && (
-                  <span className="ml-2 text-xs text-text-muted">TVL {smartShortNumber(destApyTvl.tvl, 1, true)}</span>
-                )}
               </div>
               <TokenSelector
                 tokens={destTokens}
@@ -283,7 +281,16 @@ export function ManagePositionModal({
               ) : route.error ? (
                 <div className="text-sm text-red-400 text-center">{route.error}</div>
               ) : outputFormatted ? (
-                <div className="flex justify-between items-start text-sm">
+                destToken?.apy ? <SelectedOpportunity
+                  token={destToken}
+                  apy={destToken.apy}
+                  totalAssets={destToken.totalAssets}
+                  priceUsd={destToken.vaultPrice}
+                  depositUsd={inputUsd}
+                  outputUsd={outputUsd}
+                  estimatedOutputFormatted={outputFormatted}
+                  isConnected={true}
+                 /> : <div className="flex justify-between items-start text-sm">
                   <span className="text-text-muted">Estimated output</span>
                   <div className="text-right">
                     <div className="font-mono text-foreground">~{outputFormatted} {destToken.symbol}</div>

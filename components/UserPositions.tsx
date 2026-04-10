@@ -115,7 +115,7 @@ export function UserPositions({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-6 shrink-0">
+                <div className="flex items-center gap-6 shrink-0 pr-6">
                   <div className="text-right hidden sm:block">
                     <div className="text-sm font-semibold text-foreground">{formatUsd(pos.usdValue)}</div>
                     <div className="text-xs text-muted-foreground">Value</div>
@@ -126,7 +126,7 @@ export function UserPositions({
                   </div>
                   <button
                     onClick={() => setManagingPosition(pos)}
-                    className="cta-button text-sm"
+                    className="cta-button text-sm font-bold"
                   >
                     Manage
                   </button>

@@ -19,6 +19,8 @@ export interface StakingData {
     zapSymbol?: string;
     zapAddress?: string;
     address?: string;
+    name?: string;
+    logoUri?: string;
 }
 
 export interface ChartData {
