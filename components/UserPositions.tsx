@@ -75,12 +75,14 @@ export function UserPositions({
     else setPositions([]);
   }, [address, loadPositions]);
 
+  const totalYearlyUsd = positions.reduce((prev, curr) => prev+curr.estimatedYearlyYield, 0);
+
   if (!isConnected || (!isLoading && positions.length === 0)) return null;
 
   return (
     <>
       <div className="w-full">
-        <h2 className="text-lg font-semibold text-foreground mb-3">Your Positions</h2>
+        <h2 className="text-lg font-semibold text-foreground mb-3">Your Positions <b className="text-success">(+{formatUsd(totalYearlyUsd)} yearly)</b></h2>
         {isLoading ? (
           <div className="text-muted-foreground text-sm">Loading positions…</div>
         ) : (
