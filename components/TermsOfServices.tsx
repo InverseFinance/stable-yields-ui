@@ -155,40 +155,6 @@ const Warning = ({ text }) => {
   return <p className="text-sm text-accent py-1"><b>Note</b>: {text}</p>
 }
 
-export const TermsOfServices = ({
-  items = texts
-}) => {
-  return <div className="card-shine relative bg-card-bg border border-white/[0.05] rounded-2xl p-4">
-    <p className="text-xl font-extrabold mb-3">Terms of Services:</p>
-    <div className="overflow-auto flex flex-col gap-0 max-h-[300px]">
-      {
-        items.map((v, i) => {
-          return <>
-            {
-              !!v.title && <Title text={v.title} />
-            }
-            {
-              !!v.subtitle && <Subtitle text={v.subtitle} />
-            }
-            {
-              !!v.text && <Text text={v.text} />
-            }
-            {
-              !!v.warning && <Warning text={v.warning} />
-            }
-            {
-              !!v.list && <List list={v.list} />
-            }
-          </>
-        })
-      }
-      <div className="flex flex-row gap-1 mt-2 cursor-pointer">
-        <input className="cursor-pointer" id="tos-checkbox" type="checkbox" />
-        <label className="cursor-pointer" htmlFor="tos-checkbox">I fully agree with the Terms of Services</label>
-      </div>
-    </div>
-  </div>
-}
 
 export const TOS_STORAGE_KEY = 'tos-accepted';
 
