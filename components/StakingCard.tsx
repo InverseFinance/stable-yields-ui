@@ -18,20 +18,11 @@ import { useLanguage } from '@/lib/useLanguage';
 import { type TokenPrices } from '@/lib/fetchTokenPrices';
 import { TermsModal, TOS_STORAGE_KEY } from './TermsOfServices';
 import { WorthDiffWarning } from './WorthDiffWarning';
+import { SlippageSelector, type SlippageSetting } from './SlippageSelector';
 import { StakingData } from '@/app/types';
 
 type Tab = 'stake' | 'unstake';
 type EnsoStep = 'idle' | 'approving' | 'routing';
-type SlippageSetting = 'auto' | '2' | '3' | '5' | '10' | '50' | '100';
-
-const SLIPPAGE_OPTIONS: { value: Exclude<SlippageSetting, 'auto'>; label: string }[] = [
-  { value: '2', label: '0.02%' },
-  { value: '3', label: '0.03%' },
-  { value: '5', label: '0.05%' },
-  { value: '10', label: '0.1%' },
-  { value: '50', label: '0.5%' },
-  { value: '100', label: '1%' },
-];
 
 const PRIORITY_ADDRS = [
   '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', // WETH
@@ -68,8 +59,6 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
   });
   const [isMaxWithdraw, setIsMaxWithdraw] = useState(false);
   const [slippageSetting, setSlippageSetting] = useState<SlippageSetting>('auto');
-  const [showSlippage, setShowSlippage] = useState(false);
-  const slippageRef = useRef<HTMLDivElement>(null);
   const [showTosModal, setShowTosModal] = useState(false);
   const pendingActionRef = useRef<(() => void) | null>(null);
 
@@ -384,19 +373,6 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
     }
   }, [ensoStep, isEnsoRouteConfirmed, resetEnsoRoute, refetchSdola, refetchSelectedBalance, address, loadBalances, activeTab, selectedToken.symbol, withdrawDestToken.symbol, amount]);
 
-  // ── Slippage panel click-outside ──
-
-  useEffect(() => {
-    if (!showSlippage) return;
-    function handler(e: MouseEvent) {
-      if (slippageRef.current && !slippageRef.current.contains(e.target as Node)) {
-        setShowSlippage(false);
-      }
-    }
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [showSlippage]);
-
   // ── Derived state ──
 
   const stakeBalance = isDola(selectedToken.address)
@@ -696,53 +672,8 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
           ))}
 
           {/* Slippage settings */}
-          <div className="absolute top-0 right-0 width-[90px] bottom-0 flex items-center justify-end px-4" ref={slippageRef}>
-            <button
-              onClick={() => setShowSlippage(s => !s)}
-              className="absolute top-0 bottom-0 flex items-center gap-1.5 text-text-muted hover:text-text-secondary transition-colors cursor-pointer"
-              title="Slippage settings"
-            >
-              {slippageSetting !== 'auto' && (
-                <span className="text-[11px] font-mono text-accent">
-                  {SLIPPAGE_OPTIONS.find(o => o.value === slippageSetting)?.label}
-                </span>
-              )}
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="3" />
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-              </svg>
-            </button>
-
-            {showSlippage && (
-              <div className="absolute top-full right-0 z-20 mt-1 bg-container border border-white/[0.08] rounded-xl p-3 shadow-xl w-64">
-                <div className="text-[10px] uppercase tracking-[0.15em] text-text-muted font-medium mb-2.5">
-                  {t.slippageTolerance}
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  <button
-                    onClick={() => setSlippageSetting('auto')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${slippageSetting === 'auto'
-                      ? 'bg-accent text-[#1A0E00]'
-                      : 'bg-white/[0.05] text-text-muted hover:text-text-secondary border border-white/[0.06]'
-                      }`}
-                  >
-                    Auto
-                  </button>
-                  {SLIPPAGE_OPTIONS.map(opt => (
-                    <button
-                      key={opt.value}
-                      onClick={() => { setSlippageSetting(opt.value); setShowSlippage(false); }}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all cursor-pointer ${slippageSetting === opt.value
-                        ? 'bg-accent text-[#1A0E00]'
-                        : 'bg-white/[0.05] text-text-muted hover:text-text-secondary border border-white/[0.06]'
-                        }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+          <div className="absolute top-0 right-0 bottom-0 flex items-center justify-end px-4">
+            <SlippageSelector value={slippageSetting} onChange={setSlippageSetting} label={t.slippageTolerance} />
           </div>
         </div>
 
