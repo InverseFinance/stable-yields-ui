@@ -16,6 +16,7 @@ import { addTxToast } from '@/lib/toastStore';
 import { useAddRecentTransaction } from '@rainbow-me/rainbowkit';
 import { SelectedOpportunity } from './SavingsOpportunities';
 import { WorthDiffWarning } from './WorthDiffWarning';
+import { SlippageSelector, type SlippageSetting } from './SlippageSelector';
 
 type EnsoStep = 'idle' | 'approving' | 'routing';
 
@@ -98,6 +99,7 @@ export function ManagePositionModal({
   const [sourceToken, setSourceToken] = useState<SupportedToken>(() => positionToToken(position));
   const [amount, setAmount] = useState('');
   const [ensoStep, setEnsoStep] = useState<EnsoStep>('idle');
+  const [slippageSetting, setSlippageSetting] = useState<SlippageSetting>('auto');
 
   const { tokens: allDestTokens, metaMap: destMeta } = buildDestTokens(yieldData, tokenPrices);
   const destTokens = allDestTokens.filter(t => t.address.toLowerCase() !== sourceToken.address.toLowerCase());
@@ -116,7 +118,11 @@ export function ManagePositionModal({
     try { return parseUnits(amount, currentSourcePos.decimals).toString(); } catch { return '0'; }
   })();
 
-  const route = useEnsoRoute(sourceToken.address, amountWei, address, '50', destToken.address);
+  const resolvedSlippage = slippageSetting === 'auto'
+    ? (destToken.isStablish ? '3' : '30')
+    : slippageSetting;
+
+  const route = useEnsoRoute(sourceToken.address, amountWei, address, resolvedSlippage, destToken.address);
 
   const spender = route.tx?.to as `0x${string}` | undefined;
   const { data: currentAllowance, refetch: refetchAllowance } = useReadContract({
@@ -223,7 +229,10 @@ export function ManagePositionModal({
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-4 sm:px-6 sm:pt-6">
           <h3 className="text-base font-semibold text-foreground">Manage Positions</h3>
-          <button onClick={onDismiss} className="cursor-pointer text-text-muted hover:text-foreground transition text-lg leading-none">✕</button>
+          <div className="flex items-center gap-3">
+            <SlippageSelector value={slippageSetting} onChange={setSlippageSetting} label="Slippage tolerance" />
+            <button onClick={onDismiss} className="cursor-pointer text-text-muted hover:text-foreground transition text-lg leading-none">✕</button>
+          </div>
         </div>
 
         <div className="px-5 pb-5 sm:px-6 sm:pb-6 space-y-3">
