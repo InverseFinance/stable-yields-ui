@@ -77,7 +77,7 @@ export function UserPositions({
 
   const totalYearlyUsd = positions.reduce((prev, curr) => prev+curr.estimatedYearlyYield, 0);
 
-  if (!isConnected || (!isLoading && positions.length === 0)) return null;
+  if (!isConnected || isLoading || (!isLoading && positions.length === 0)) return null;
 
   return (
     <>
