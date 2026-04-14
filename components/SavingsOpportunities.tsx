@@ -152,7 +152,7 @@ export const SelectedOpportunity = ({
                     token.isVault && <span className="font-mono text-accent font-semibold text-xs gradient-text">{formatApy(estimatedNewApy)}</span>
                 }
                 <span className="font-mono text-success text-xs">+{formatUsd(estimatedYearlyGain)}/yr</span>
-                {isConnected && <span className="font-mono text-primary text-xs">{estimatedOutputFormatted ? `${estimatedOutputFormatted} ${token.zapSymbol || token.symbol} (~${formatUsd(outputUsd, 2)})` : '-'}</span>}
+                {isConnected && <span className="font-mono text-primary text-xs">{estimatedOutputFormatted ? `${estimatedOutputFormatted} ${token.zapSymbol || token.symbol} (≈${formatUsd(outputUsd, 2)})` : '-'}</span>}
             </div>
         </div>
     );

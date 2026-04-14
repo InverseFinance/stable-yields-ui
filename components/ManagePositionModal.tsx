@@ -311,9 +311,9 @@ export function ManagePositionModal({
                 /> : <div className="flex justify-between items-start text-sm">
                   <span className="text-text-muted">Estimated output</span>
                   <div className="text-right">
-                    <div className="font-mono text-foreground">~{outputFormatted} {destToken.symbol}</div>
+                    <div className="font-mono text-foreground">{outputFormatted} {destToken.symbol}</div>
                     {outputUsd > 0 && (
-                      <div className="text-text-muted text-xs">≈{formatUsd(outputUsd)}</div>
+                      <div className="text-text-muted text-xs font-mono">≈{formatUsd(outputUsd)}</div>
                     )}
                   </div>
                 </div>

@@ -853,7 +853,7 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
                 ) : ensoDepositRoute.amountOut ? (
                   <div className="flex justify-between text-sm">
                     <span className="text-text-muted">{t.estimatedOutput}</span>
-                    <span className="font-mono text-foreground">~{estimatedOutputFormatted} {stakingData?.zapSymbol || stakingData?.symbol}</span>
+                    <span className="font-mono text-foreground">≈{estimatedOutputFormatted} {stakingData?.zapSymbol || stakingData?.symbol}</span>
                   </div>
                 ) : ensoDepositRoute.error ? (
                   <div className="text-sm text-red-400 text-center">{ensoDepositRoute.error}</div>
@@ -874,11 +874,11 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
                     <span className="text-text-muted">{t.estimatedOutput}</span>
                     <div className="text-right">
                       <div className="font-mono text-foreground">
-                        ~{formatTokenAmount(ensoWithdrawRoute.amountOut, withdrawDestToken.decimals)} {withdrawDestToken.symbol}
+                        ≈{formatTokenAmount(ensoWithdrawRoute.amountOut, withdrawDestToken.decimals)} {withdrawDestToken.symbol}
                       </div>
                       {withdrawDestToken.price ? (
                         <div className="text-text-muted text-xs">
-                          ~${(Number(formatUnits(BigInt(ensoWithdrawRoute.amountOut), withdrawDestToken.decimals)) * withdrawDestToken.price).toFixed(2)}
+                          ≈${(Number(formatUnits(BigInt(ensoWithdrawRoute.amountOut), withdrawDestToken.decimals)) * withdrawDestToken.price).toFixed(2)}
                         </div>
                       ) : null}
                     </div>
@@ -890,7 +890,7 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
                 <div className="flex justify-between text-sm">
                   <span className="text-text-muted">{t.youWillReceive}</span>
                   <span className="font-mono text-foreground">
-                    {isMaxWithdraw ? `~${formatBalance(sdolaBalanceInDola ?? parsedAmount, 18, 2)}` : formatBalance(parsedAmount, 18, 2)} DOLA
+                    {isMaxWithdraw ? `≈${formatBalance(sdolaBalanceInDola ?? parsedAmount, 18, 2)}` : formatBalance(parsedAmount, 18, 2)} DOLA
                   </span>
                 </div>
               )}
