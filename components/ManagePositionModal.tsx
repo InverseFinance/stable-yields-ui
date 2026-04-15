@@ -427,6 +427,9 @@ export function ManagePositionModal({
             )}
             {btnText}
           </button>
+          <p className="text-text-muted text-center w-full text-xs">
+            Routing is powered by Enso & inclusive of a 0.1% frontend fee
+          </p>
         </div>
       </div>
     </div>
