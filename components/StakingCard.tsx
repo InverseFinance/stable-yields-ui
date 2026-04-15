@@ -624,7 +624,7 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
   const depositUsd = selectedToken ? (parseFloat(amount) || 0) * selectedToken.price : 0;
   const estimatedOutput = ensoDepositRoute.isLoading ? '' : ensoDepositRoute.amountOut;
   const outputDecimals = stakingData ? stakingData?.zapDecimals || stakingData?.decimals : 18;
-  const estimatedOutputFormatted = estimatedOutput ? formatTokenAmount(estimatedOutput, outputDecimals) : '';
+  const estimatedOutputFormatted = estimatedOutput ? formatTokenAmount(estimatedOutput, outputDecimals, 2) : '';
   const outputFloat = estimatedOutput ? parseFloat(formatUnits(estimatedOutput, outputDecimals)) : 0;
   const outputUsd = outputFloat ? outputFloat * stakingData.vaultPrice : 0;
 
