@@ -129,18 +129,27 @@ export function ManagePositionModal({
   const baseSourceTokens = allPositions.map(positionToToken);
   const baseSourceAddrs = new Set(baseSourceTokens.map(t => t.address.toLowerCase()));
   const destIsVault = !!(destToken as { isVault?: boolean }).isVault;
+
+  const enrichWalletToken = (t: SupportedToken): SupportedToken => {
+    const key = t.address.toLowerCase();
+    const price = tokenPrices[key] ?? t.price ?? 0;
+    const wb = walletBalances[key];
+    const usd = wb && price ? Number(wb.formatted) * price : (t.usd || 0);
+    return { ...t, price, usd };
+  };
+
   const extraWalletSources: SupportedToken[] = destIsVault
     ? SUPPORTED_TOKENS
       .filter(t => t.isIdleStable || !t.isStablish)
       .filter(t => !baseSourceAddrs.has(t.address.toLowerCase()))
       .filter(t => t.address.toLowerCase() !== destToken.address.toLowerCase())
-      .map(t => ({ ...t, price: tokenPrices[t.address.toLowerCase()] ?? t.price }))
+      .map(enrichWalletToken)
     : [];
 
   const sourceTokens = sourceIsVault
     ? [...baseSourceTokens, ...extraWalletSources]
     : [
-      sourceToken,
+      enrichWalletToken(sourceToken),
       ...baseSourceTokens,
       ...extraWalletSources.filter(t => t.address.toLowerCase() !== sourceToken.address.toLowerCase()),
     ];
