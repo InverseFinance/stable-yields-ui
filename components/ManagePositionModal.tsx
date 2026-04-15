@@ -120,10 +120,30 @@ export function ManagePositionModal({
   );
   const sourceIsVault = !!currentSourcePos;
 
+  const { tokens: allDestTokens, metaMap: destMeta } = buildDestTokens(yieldData, tokenPrices);
+  const destTokens = allDestTokens.filter(t => t.address.toLowerCase() !== sourceToken.address.toLowerCase());
+  const [destToken, setDestToken] = useState<SupportedToken>(() => {
+    return destTokens.find(t => t.address.toLowerCase() === USDC_ADDRESS.toLowerCase()) ?? destTokens[0];
+  });
+
   const baseSourceTokens = allPositions.map(positionToToken);
+  const baseSourceAddrs = new Set(baseSourceTokens.map(t => t.address.toLowerCase()));
+  const destIsVault = !!(destToken as { isVault?: boolean }).isVault;
+  const extraWalletSources: SupportedToken[] = destIsVault
+    ? SUPPORTED_TOKENS
+      .filter(t => t.isIdleStable || !t.isStablish)
+      .filter(t => !baseSourceAddrs.has(t.address.toLowerCase()))
+      .filter(t => t.address.toLowerCase() !== destToken.address.toLowerCase())
+      .map(t => ({ ...t, price: tokenPrices[t.address.toLowerCase()] ?? t.price }))
+    : [];
+
   const sourceTokens = sourceIsVault
-    ? baseSourceTokens
-    : [sourceToken, ...baseSourceTokens];
+    ? [...baseSourceTokens, ...extraWalletSources]
+    : [
+      sourceToken,
+      ...baseSourceTokens,
+      ...extraWalletSources.filter(t => t.address.toLowerCase() !== sourceToken.address.toLowerCase()),
+    ];
 
   const sourceMeta: Record<string, TokenMeta> = Object.fromEntries(
     allPositions.map(p => [p.tokenAddress.toLowerCase(), { apy: p.stakingData.apy, tvl: p.stakingData.tvl }])
@@ -131,6 +151,13 @@ export function ManagePositionModal({
   const sourceBals: Record<string, string> = Object.fromEntries(
     allPositions.map(p => [p.tokenAddress.toLowerCase(), p.balance < 0.0001 ? '<0.0001' : p.balance.toFixed(4)])
   );
+  for (const t of extraWalletSources) {
+    const wb = walletBalances[t.address.toLowerCase()];
+    if (wb) {
+      const n = Number(wb.formatted);
+      sourceBals[t.address.toLowerCase()] = n < 0.0001 ? '<0.0001' : n.toFixed(4);
+    }
+  }
   if (!sourceIsVault) {
     const wb = walletBalances[sourceToken.address.toLowerCase()];
     if (wb) {
@@ -138,12 +165,6 @@ export function ManagePositionModal({
       sourceBals[sourceToken.address.toLowerCase()] = n < 0.0001 ? '<0.0001' : n.toFixed(4);
     }
   }
-
-  const { tokens: allDestTokens, metaMap: destMeta } = buildDestTokens(yieldData, tokenPrices);
-  const destTokens = allDestTokens.filter(t => t.address.toLowerCase() !== sourceToken.address.toLowerCase());
-  const [destToken, setDestToken] = useState<SupportedToken>(() => {
-    return destTokens.find(t => t.address.toLowerCase() === USDC_ADDRESS.toLowerCase()) ?? destTokens[0];
-  });
 
   function handleFlipTokens() {
     if (isPending) return;
