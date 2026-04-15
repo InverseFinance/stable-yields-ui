@@ -54,7 +54,7 @@ export default async function YieldsPage() {
             Stable Yields
           </h1>
           <h2 className="text-lg sm:text-xl lg:text-2xl text-muted-foreground">
-            Compare stablecoin yields across major DeFi protocols
+            Earn and compare the best stablecoin yields across major DeFi protocols
           </h2>
         </div>
       </header>
