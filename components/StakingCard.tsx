@@ -829,7 +829,9 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
           )}
 
           {/* Worth diff warnings */}
-          <WorthDiffWarning warnHighWorthDiff={warnHighWorthDiff} blockHighWorthDiff={blockHighWorthDiff} />
+          {
+            !ensoDepositRoute.isLoading && !ensoDepositRoute.error && <WorthDiffWarning warnHighWorthDiff={warnHighWorthDiff} blockHighWorthDiff={blockHighWorthDiff} />
+          }
 
           {/* Action Button */}
           <button
