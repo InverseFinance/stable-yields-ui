@@ -8,7 +8,7 @@ import { type TokenPrices } from '@/lib/fetchTokenPrices';
 import { type StakingData } from '@/app/types';
 import { type VaultPosition } from './UserPositions';
 import { useEnsoRoute } from '@/hooks/useEnsoRoute';
-import { fetchEnsoApproval } from '@/lib/enso';
+import { fetchEnsoApproval, fetchEnsoBalances } from '@/lib/enso';
 import { ERC20_ABI } from '@/lib/contracts';
 import { TokenSelector, type TokenMeta } from './TokenSelector';
 import { formatUsd, formatTokenAmount, smartShortNumber } from '@/lib/utils';
@@ -88,18 +88,56 @@ export function ManagePositionModal({
   onDismiss: () => void;
   onSuccess: () => void;
 }) {
-  const sourceTokens = allPositions.map(positionToToken);
+  const [sourceToken, setSourceToken] = useState<SupportedToken>(() => positionToToken(position));
+  const [amount, setAmount] = useState('');
+  const [ensoStep, setEnsoStep] = useState<EnsoStep>('idle');
+  const [slippageSetting, setSlippageSetting] = useState<SlippageSetting>('auto');
+  const [walletBalances, setWalletBalances] = useState<Record<string, { amountWei: bigint; decimals: number; formatted: string }>>({});
+
+  useEffect(() => {
+    if (!address) return;
+    let cancelled = false;
+    fetchEnsoBalances(address)
+      .then(balances => {
+        if (cancelled) return;
+        const map: Record<string, { amountWei: bigint; decimals: number; formatted: string }> = {};
+        for (const b of balances) {
+          const amt = BigInt(b.amount);
+          map[b.token.toLowerCase()] = {
+            amountWei: amt,
+            decimals: b.decimals,
+            formatted: formatUnits(amt, b.decimals),
+          };
+        }
+        setWalletBalances(map);
+      })
+      .catch(err => console.error('Failed to fetch wallet balances:', err));
+    return () => { cancelled = true; };
+  }, [address]);
+
+  const currentSourcePos = allPositions.find(
+    p => p.tokenAddress.toLowerCase() === sourceToken.address.toLowerCase()
+  );
+  const sourceIsVault = !!currentSourcePos;
+
+  const baseSourceTokens = allPositions.map(positionToToken);
+  const sourceTokens = sourceIsVault
+    ? baseSourceTokens
+    : [sourceToken, ...baseSourceTokens];
+
   const sourceMeta: Record<string, TokenMeta> = Object.fromEntries(
     allPositions.map(p => [p.tokenAddress.toLowerCase(), { apy: p.stakingData.apy, tvl: p.stakingData.tvl }])
   );
   const sourceBals: Record<string, string> = Object.fromEntries(
     allPositions.map(p => [p.tokenAddress.toLowerCase(), p.balance < 0.0001 ? '<0.0001' : p.balance.toFixed(4)])
   );
-
-  const [sourceToken, setSourceToken] = useState<SupportedToken>(() => positionToToken(position));
-  const [amount, setAmount] = useState('');
-  const [ensoStep, setEnsoStep] = useState<EnsoStep>('idle');
-  const [slippageSetting, setSlippageSetting] = useState<SlippageSetting>('auto');
+  if (!sourceIsVault) {
+    const wb = walletBalances[sourceToken.address.toLowerCase()];
+    if (wb) {
+      const n = Number(wb.formatted);
+      sourceBals[sourceToken.address.toLowerCase()] = n < 0.0001 ? '<0.0001' : n.toFixed(4);
+    }
+  }
 
   const { tokens: allDestTokens, metaMap: destMeta } = buildDestTokens(yieldData, tokenPrices);
   const destTokens = allDestTokens.filter(t => t.address.toLowerCase() !== sourceToken.address.toLowerCase());
@@ -107,16 +145,12 @@ export function ManagePositionModal({
     return destTokens.find(t => t.address.toLowerCase() === USDC_ADDRESS.toLowerCase()) ?? destTokens[0];
   });
 
-  const canFlipTokens = sourceTokens.some(
-    t => t.address.toLowerCase() === destToken.address.toLowerCase()
-  );
-
   function handleFlipTokens() {
-    if (!canFlipTokens || isPending) return;
+    if (isPending) return;
 
     const nextSource =
-      sourceTokens.find(t => t.address.toLowerCase() === destToken.address.toLowerCase()) ??
-      sourceToken;
+      allDestTokens.find(t => t.address.toLowerCase() === destToken.address.toLowerCase()) ??
+      destToken;
 
     const nextDest =
       allDestTokens.find(t => t.address.toLowerCase() === sourceToken.address.toLowerCase()) ??
@@ -127,15 +161,17 @@ export function ManagePositionModal({
     setAmount('');
   }
 
-  const currentSourcePos = allPositions.find(
-    p => p.tokenAddress.toLowerCase() === sourceToken.address.toLowerCase()
-  ) ?? position;
-
-  const maxAmount = formatUnits(currentSourcePos.amountWei, currentSourcePos.decimals);
+  const walletBal = walletBalances[sourceToken.address.toLowerCase()];
+  const sourceBalanceWei = sourceIsVault ? currentSourcePos!.amountWei : walletBal?.amountWei ?? 0n;
+  const sourceDecimals = sourceIsVault ? currentSourcePos!.decimals : sourceToken.decimals;
+  const sourceBalanceNum = sourceIsVault
+    ? currentSourcePos!.balance
+    : walletBal ? Number(walletBal.formatted) : 0;
+  const maxAmount = formatUnits(sourceBalanceWei, sourceDecimals);
 
   const amountWei = (() => {
     if (!amount) return '0';
-    try { return parseUnits(amount, currentSourcePos.decimals).toString(); } catch { return '0'; }
+    try { return parseUnits(amount, sourceDecimals).toString(); } catch { return '0'; }
   })();
 
   const resolvedSlippage = slippageSetting === 'auto'
@@ -158,9 +194,15 @@ export function ManagePositionModal({
     ? Number(formatUnits(BigInt(route.amountOut), destToken.decimals)) * (((destToken.vaultPrice || tokenPrices[destToken.address.toLowerCase()]) ?? 0))
     : 0;
 
-  const inputUsd = currentSourcePos.usdValue > 0 && parseFloat(amount) > 0
-    ? (parseFloat(amount) / currentSourcePos.balance) * currentSourcePos.usdValue
-    : 0;
+  const inputUsd = (() => {
+    const qty = parseFloat(amount);
+    if (!qty || qty <= 0) return 0;
+    if (sourceIsVault && currentSourcePos!.usdValue > 0 && currentSourcePos!.balance > 0) {
+      return (qty / currentSourcePos!.balance) * currentSourcePos!.usdValue;
+    }
+    const price = tokenPrices[sourceToken.address.toLowerCase()] ?? sourceToken.price ?? 0;
+    return qty * price;
+  })();
 
   const addRecentTransaction = useAddRecentTransaction();
 
@@ -230,12 +272,18 @@ export function ManagePositionModal({
   const warnHighWorthDiff = worthDiff > 0.01;
   const blockHighWorthDiff = worthDiff > 0.05;
 
-  const btnDisabled = isPending || !amount || amountWei === '0' || !route.tx || route.isLoading || blockHighWorthDiff;
+  const insufficientBalance = (() => {
+    if (amountWei === '0') return false;
+    try { return BigInt(amountWei) > sourceBalanceWei; } catch { return false; }
+  })();
+
+  const btnDisabled = isPending || !amount || amountWei === '0' || !route.tx || route.isLoading || blockHighWorthDiff || insufficientBalance;
   const btnText =
     ensoStep === 'approving' ? 'Approving…' :
       ensoStep === 'routing' ? 'Swapping…' :
-        route.isLoading ? 'Fetching route…' :
-          `Swap to ${destToken.symbol}`;
+        insufficientBalance ? 'Insufficient balance' :
+          route.isLoading ? 'Fetching route…' :
+            `Swap to ${destToken.symbol}`;
 
   return (
     <div
@@ -261,12 +309,14 @@ export function ManagePositionModal({
 
             {/* YOU SWAP row */}
             <div className="flex items-center justify-between mb-3">
-              <span className="text-text-muted text-[10px] uppercase tracking-[0.15em] font-medium">Withdraw From</span>
+              <span className="text-text-muted text-[10px] uppercase tracking-[0.15em] font-medium">
+                {sourceIsVault ? 'Withdraw From' : `Swap ${sourceToken.symbol}`}
+              </span>
               <button
                 onClick={() => setAmount(maxAmount)}
                 className="flex items-center gap-1 text-xs text-text-muted hover:text-text-secondary transition-colors cursor-pointer group"
               >
-                <span className="text-muted-foreground">Bal {currentSourcePos.balance < 0.0001 ? '<0.0001' : currentSourcePos.balance.toFixed(4)}</span>
+                <span className="text-muted-foreground">Bal {sourceBalanceNum < 0.0001 ? (sourceBalanceNum > 0 ? '<0.0001' : '0') : sourceBalanceNum.toFixed(4)}</span>
                 <span className="text-accent font-semibold ml-1 group-hover:text-accent-hover transition-colors">Max</span>
               </button>
             </div>
@@ -304,55 +354,58 @@ export function ManagePositionModal({
               <div className="mt-1.5 text-text-muted text-xs font-mono">≈{formatUsd(inputUsd)}</div>
             )}
 
-            {/* TO row — separator + destination */}
-            <div className="mt-3 pt-3 border-t border-white/[0.04]">
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-text-muted text-[10px] uppercase tracking-[0.15em] font-medium">To</span>
-                  <TokenSelector
-                    tokens={destTokens}
-                    selected={destToken}
-                    onSelect={setDestToken}
-                    metadata={destMeta}
-                  />
-                </div>
-                {/* Output preview */}
-                {amountWei !== '0' && (
-                  <div className="">
-                    {route.isLoading ? (
-                      <div className="flex justify-center py-0.5">
-                        <span className="inline-block w-4 h-4 border-2 border-accent/20 border-t-accent rounded-full animate-spin" />
-                      </div>
-                    ) : route.error ? (
-                      <div className="text-sm text-red-400 text-center">{route.error}</div>
-                    ) : outputFormatted ? <SelectedOpportunity
-                      token={destToken}
-                      apy={destToken.apy}
-                      totalAssets={destToken.totalAssets}
-                      priceUsd={destToken.vaultPrice}
-                      depositUsd={inputUsd}
-                      outputUsd={outputUsd}
-                      estimatedOutputFormatted={outputFormatted}
-                      isConnected={true}
-                    /> : null}
-                  </div>
-                )}
-              </div>
+            {/* Flip button — round, centered on the separator */}
+            <div className="relative my-3 flex items-center justify-center">
+              <div className="absolute inset-x-0 top-1/2 h-px bg-white/[0.04]" />
+              <button
+                type="button"
+                onClick={handleFlipTokens}
+                disabled={isPending}
+                title="Swap source and destination"
+                aria-label="Swap source and destination"
+                className={`group relative p-2 z-10 w-9 h-9 rounded-full border flex items-center justify-center bg-container transition-all duration-200 ${isPending
+                  ? 'border-white/[0.06] text-text-muted cursor-not-allowed'
+                  : 'border-white/[0.10] text-text-secondary hover:text-accent hover:border-accent/40 hover:bg-accent/[0.08] hover:scale-110 hover:shadow-[0_0_12px_rgba(255,165,0,0.15)] cursor-pointer'
+                  }`}
+              >
+                <svg className="w-4 h-4 transition-transform duration-300 group-hover:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                </svg>
+              </button>
+            </div>
 
-              <div className="flex justify-center mt-2">
-                <button
-                  type="button"
-                  onClick={handleFlipTokens}
-                  disabled={!canFlipTokens || isPending}
-                  title={canFlipTokens ? 'Swap source and destination' : 'You can only flip into a token you already hold'}
-                  className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${!canFlipTokens || isPending
-                    ? 'border-white/[0.06] text-text-muted cursor-not-allowed bg-white/[0.02]'
-                    : 'border-white/[0.10] text-text-secondary hover:text-foreground hover:bg-white/[0.04] cursor-pointer'
-                    }`}
-                >
-                  Switch source ↔ destination
-                </button>
+            {/* TO row — destination */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-text-muted text-[10px] uppercase tracking-[0.15em] font-medium">To</span>
+                <TokenSelector
+                  tokens={destTokens}
+                  selected={destToken}
+                  onSelect={setDestToken}
+                  metadata={destMeta}
+                />
               </div>
+              {/* Output preview */}
+              {amountWei !== '0' && (
+                <div className="">
+                  {route.isLoading ? (
+                    <div className="flex justify-center py-0.5">
+                      <span className="inline-block w-4 h-4 border-2 border-accent/20 border-t-accent rounded-full animate-spin" />
+                    </div>
+                  ) : route.error ? (
+                    <div className="text-sm text-red-400 text-center">{route.error}</div>
+                  ) : outputFormatted ? <SelectedOpportunity
+                    token={destToken}
+                    apy={destToken.apy}
+                    totalAssets={destToken.totalAssets}
+                    priceUsd={destToken.vaultPrice}
+                    depositUsd={inputUsd}
+                    outputUsd={outputUsd}
+                    estimatedOutputFormatted={outputFormatted}
+                    isConnected={true}
+                  /> : null}
+                </div>
+              )}
             </div>
           </div>
 
