@@ -107,6 +107,26 @@ export function ManagePositionModal({
     return destTokens.find(t => t.address.toLowerCase() === USDC_ADDRESS.toLowerCase()) ?? destTokens[0];
   });
 
+  const canFlipTokens = sourceTokens.some(
+    t => t.address.toLowerCase() === destToken.address.toLowerCase()
+  );
+
+  function handleFlipTokens() {
+    if (!canFlipTokens || isPending) return;
+
+    const nextSource =
+      sourceTokens.find(t => t.address.toLowerCase() === destToken.address.toLowerCase()) ??
+      sourceToken;
+
+    const nextDest =
+      allDestTokens.find(t => t.address.toLowerCase() === sourceToken.address.toLowerCase()) ??
+      (allDestTokens.find(t => t.address.toLowerCase() !== nextSource.address.toLowerCase()) as SupportedToken | undefined);
+
+    setSourceToken(nextSource);
+    if (nextDest) setDestToken(nextDest);
+    setAmount('');
+  }
+
   const currentSourcePos = allPositions.find(
     p => p.tokenAddress.toLowerCase() === sourceToken.address.toLowerCase()
   ) ?? position;
@@ -285,60 +305,68 @@ export function ManagePositionModal({
             )}
 
             {/* TO row — separator + destination */}
-            <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/[0.04]">
-              <div>
-                <span className="text-text-muted text-[10px] uppercase tracking-[0.15em] font-medium">To</span>
+            <div className="mt-3 pt-3 border-t border-white/[0.04]">
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-text-muted text-[10px] uppercase tracking-[0.15em] font-medium">To</span>
+                  <TokenSelector
+                    tokens={destTokens}
+                    selected={destToken}
+                    onSelect={setDestToken}
+                    metadata={destMeta}
+                  />
+                </div>
+                {/* Output preview */}
+                {amountWei !== '0' && (
+                  <div className="">
+                    {route.isLoading ? (
+                      <div className="flex justify-center py-0.5">
+                        <span className="inline-block w-4 h-4 border-2 border-accent/20 border-t-accent rounded-full animate-spin" />
+                      </div>
+                    ) : route.error ? (
+                      <div className="text-sm text-red-400 text-center">{route.error}</div>
+                    ) : outputFormatted ? <SelectedOpportunity
+                      token={destToken}
+                      apy={destToken.apy}
+                      totalAssets={destToken.totalAssets}
+                      priceUsd={destToken.vaultPrice}
+                      depositUsd={inputUsd}
+                      outputUsd={outputUsd}
+                      estimatedOutputFormatted={outputFormatted}
+                      isConnected={true}
+                    /> : null}
+                  </div>
+                )}
               </div>
-              <TokenSelector
-                tokens={destTokens}
-                selected={destToken}
-                onSelect={setDestToken}
-                metadata={destMeta}
-              />
+
+              <div className="flex justify-center mt-2">
+                <button
+                  type="button"
+                  onClick={handleFlipTokens}
+                  disabled={!canFlipTokens || isPending}
+                  title={canFlipTokens ? 'Swap source and destination' : 'You can only flip into a token you already hold'}
+                  className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${!canFlipTokens || isPending
+                    ? 'border-white/[0.06] text-text-muted cursor-not-allowed bg-white/[0.02]'
+                    : 'border-white/[0.10] text-text-secondary hover:text-foreground hover:bg-white/[0.04] cursor-pointer'
+                    }`}
+                >
+                  Switch source ↔ destination
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Output preview */}
-          {amountWei !== '0' && (
-            <div className="border border-white/[0.04] rounded-xl px-4 py-3">
-              {route.isLoading ? (
-                <div className="flex justify-center py-0.5">
-                  <span className="inline-block w-4 h-4 border-2 border-accent/20 border-t-accent rounded-full animate-spin" />
-                </div>
-              ) : route.error ? (
-                <div className="text-sm text-red-400 text-center">{route.error}</div>
-              ) : outputFormatted ? (
-                destToken?.apy ? <SelectedOpportunity
-                  token={destToken}
-                  apy={destToken.apy}
-                  totalAssets={destToken.totalAssets}
-                  priceUsd={destToken.vaultPrice}
-                  depositUsd={inputUsd}
-                  outputUsd={outputUsd}
-                  estimatedOutputFormatted={outputFormatted}
-                  isConnected={true}
-                /> : <div className="flex justify-between items-start text-sm">
-                  <span className="text-text-muted">Estimated output</span>
-                  <div className="text-right">
-                    <div className="font-mono text-foreground">{outputFormatted} {destToken.symbol}</div>
-                    {outputUsd > 0 && (
-                      <div className="text-text-muted text-xs font-mono">≈{formatUsd(outputUsd)}</div>
-                    )}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          )}
-
-          <WorthDiffWarning warnHighWorthDiff={warnHighWorthDiff} blockHighWorthDiff={blockHighWorthDiff} />
+          {
+            !route?.isLoading && !route?.error && <WorthDiffWarning warnHighWorthDiff={warnHighWorthDiff} blockHighWorthDiff={blockHighWorthDiff} />
+          }
 
           {/* Action button */}
           <button
             onClick={handleSwap}
             disabled={btnDisabled}
             className={`w-full py-4 rounded-xl font-semibold text-sm tracking-wide transition-all duration-200 ${btnDisabled
-                ? 'bg-white/[0.04] text-text-muted cursor-not-allowed border border-white/[0.04]'
-                : 'btn-primary text-[#1A0E00] cursor-pointer'
+              ? 'bg-white/[0.04] text-text-muted cursor-not-allowed border border-white/[0.04]'
+              : 'btn-primary text-[#1A0E00] cursor-pointer'
               }`}
           >
             {isPending && (
