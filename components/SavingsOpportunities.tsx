@@ -131,27 +131,32 @@ export const SelectedOpportunity = ({
     const newTotalAssets = totalAssets + depositDola;
     const estimatedNewApy = totalAssets ? newTotalAssets ? apy * (totalAssets / newTotalAssets) : 0 : apy;
     const estimatedYearlyGain = estimatedNewApy / 100 * depositUsd;
+    const isNotOppy = !apy;
 
     return (
         <div className="flex justify-between text-sm">
             <div className="flex flex-col gap-0.5">
                 {
-                    !token.isVault && <p className="text-warning text-xs font-bold">Note:</p>
+                    !token.isVault && !isNotOppy && <p className="text-warning text-xs font-bold">Note:</p>
                 }
                 {
                     token.isVault && <span className="text-text-muted text-xs">{t.estApyAfterDeposit}</span>
                 }
-                <span className="text-text-muted text-xs">{t.estYearlyGains}</span>
+                {
+                    estimatedYearlyGain > 0 && <span className="text-text-muted text-xs">{t.estYearlyGains}</span>
+                }
                 {isConnected && <span className="text-text-muted text-xs">{t.estimatedOutput}</span>}
             </div>
             <div className="flex flex-col items-end gap-0.5">
                 {
-                    !token.isVault && <p className="text-warning text-xs">Not a vault, your deposits will be lent out on Aave</p>
+                    !token.isVault && !isNotOppy && <p className="text-warning text-xs">Not a vault, your deposits will be lent out on Aave</p>
                 }
                 {
                     token.isVault && <span className="font-mono text-accent font-semibold text-xs gradient-text">{formatApy(estimatedNewApy)}</span>
                 }
-                <span className="font-mono text-success text-xs">+{formatUsd(estimatedYearlyGain)}/yr</span>
+                {
+                    estimatedYearlyGain > 0 && <span className="font-mono text-success text-xs">+{formatUsd(estimatedYearlyGain)}/yr</span>
+                }
                 {isConnected && <span className="font-mono text-primary text-xs">{estimatedOutputFormatted ? `${estimatedOutputFormatted} ${token.zapSymbol || token.symbol} (≈${formatUsd(outputUsd, 2)})` : '-'}</span>}
             </div>
         </div>
