@@ -705,8 +705,8 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
                   onClick={handleMax}
                   className="flex items-center gap-1 text-xs text-text-muted hover:text-text-secondary transition-colors duration-150 cursor-pointer group"
                 >
-                  <span>{t.bal} </span>
-                  <span className="font-mono">{balanceDisplay} {balanceLabel}</span>
+                  <span className="text-muted-foreground">{t.bal} </span>
+                  <span className="text-muted-foreground font-mono">{balanceDisplay}</span>
                   <span className="text-accent font-semibold ml-1 group-hover:text-accent-hover transition-colors">{t.max}</span>
                 </button>
               )}

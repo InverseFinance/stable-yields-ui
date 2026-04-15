@@ -317,7 +317,7 @@ export function ManagePositionModal({
                 className="flex items-center gap-1 text-xs text-text-muted hover:text-text-secondary transition-colors cursor-pointer group"
               >
                 <span className="text-muted-foreground">Bal {sourceBalanceNum < 0.0001 ? (sourceBalanceNum > 0 ? '<0.0001' : '0') : sourceBalanceNum.toFixed(4)}</span>
-                <span className="text-accent font-semibold ml-1 group-hover:text-accent-hover transition-colors">Max</span>
+                <span className="text-accent text-mono font-semibold ml-1 group-hover:text-accent-hover transition-colors">MAX</span>
               </button>
             </div>
 
