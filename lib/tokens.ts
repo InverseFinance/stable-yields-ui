@@ -165,7 +165,7 @@ export const SUPPORTED_TOKENS: SupportedToken[] = [
     decimals: 18,
     logoUri: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png',
     isNative: true,
-    isStablish: true,
+    isStablish: false,
     coingeckoId: 'ethereum',
   },
   {
