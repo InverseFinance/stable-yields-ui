@@ -30,6 +30,7 @@ function positionToToken(pos: VaultPosition): SupportedToken {
     decimals: pos.decimals,
     logoUri: pos.stakingData.image,
     usd: pos.usdValue,
+    isVault: true,
     coingeckoId: '',
   };
 }
@@ -204,8 +205,13 @@ export function ManagePositionModal({
     try { return parseUnits(amount, sourceDecimals).toString(); } catch { return '0'; }
   })();
 
+  const isDestStablish = destToken.isStablish || destToken.isVault;
+  const isSourceStablish = sourceToken.isStablish || sourceToken.isVault;
+  const isOneOfTwoStablish = ((isSourceStablish && !isDestStablish) || (!isSourceStablish && isDestStablish));
+
   const resolvedSlippage = slippageSetting === 'auto'
-    ? (destToken.isStablish ? '3' : '30')
+  // auto: if both stablish => 3bps, if only one => 30 bps, otherwise 60bps
+    ? (isDestStablish && isSourceStablish ? '3' : isOneOfTwoStablish ? '30' : '60')
     : slippageSetting;
 
   const route = useEnsoRoute(sourceToken.address, amountWei, address, resolvedSlippage, destToken.address);
@@ -219,7 +225,8 @@ export function ManagePositionModal({
     query: { enabled: !!spender },
   });
 
-  const outputFormatted = route.amountOut ? formatTokenAmount(route.amountOut, destToken.decimals) : '';
+  const outputFormatted = route.amountOut ? formatTokenAmount(route.amountOut, destToken.decimals, (destToken.price || 0) > 10 ? 4 : 2) : '';
+  
   const outputUsd = route.amountOut
     ? Number(formatUnits(BigInt(route.amountOut), destToken.decimals)) * (((destToken.vaultPrice || tokenPrices[destToken.address.toLowerCase()]) ?? 0))
     : 0;
