@@ -108,7 +108,7 @@ export function UserPositions({
                       </span>
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      {pos.balance < 0.0001 ? '<0.0001' : pos.balance.toFixed(4)} tokens
+                      {pos.balance < 1 ? '<1' : pos.balance.toFixed(2)} tokens
                     </div>
                     {/* Mobile-only USD row */}
                     <div className="text-xs text-muted-foreground sm:hidden mt-0.5">
