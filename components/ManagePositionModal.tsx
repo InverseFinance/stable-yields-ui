@@ -209,12 +209,18 @@ export function ManagePositionModal({
   const isSourceStablish = sourceToken.isStablish || sourceToken.isVault;
   const isOneOfTwoStablish = ((isSourceStablish && !isDestStablish) || (!isSourceStablish && isDestStablish));
 
+  const insufficientBalance = (() => {
+    if (amountWei === '0') return false;
+    try { return BigInt(amountWei) > sourceBalanceWei; } catch { return false; }
+  })();
+
   const resolvedSlippage = slippageSetting === 'auto'
   // auto: if both stablish => 3bps, if only one => 30 bps, otherwise 60bps
     ? (isDestStablish && isSourceStablish ? '3' : isOneOfTwoStablish ? '30' : '60')
     : slippageSetting;
 
-  const route = useEnsoRoute(sourceToken.address, amountWei, address, resolvedSlippage, destToken.address);
+  const canAutoRefresh = ensoStep === 'idle' && !!amount && amountWei !== '0' && !insufficientBalance;
+  const route = useEnsoRoute(sourceToken.address, amountWei, address, resolvedSlippage, destToken.address, canAutoRefresh);
 
   const spender = route.tx?.to as `0x${string}` | undefined;
   const { data: currentAllowance, refetch: refetchAllowance } = useReadContract({
@@ -308,11 +314,6 @@ export function ManagePositionModal({
   const worthDiff = inputUsd && outputUsd ? (inputUsd - outputUsd) / inputUsd : 0;
   const warnHighWorthDiff = worthDiff > 0.01;
   const blockHighWorthDiff = worthDiff > 0.05;
-
-  const insufficientBalance = (() => {
-    if (amountWei === '0') return false;
-    try { return BigInt(amountWei) > sourceBalanceWei; } catch { return false; }
-  })();
 
   const btnDisabled = isPending || !amount || amountWei === '0' || !route.tx || route.isLoading || blockHighWorthDiff || insufficientBalance;
   const btnText =

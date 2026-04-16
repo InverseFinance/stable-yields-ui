@@ -3,6 +3,9 @@ import { fetchEnsoRoute } from '@/lib/enso';
 import { isDola } from '@/lib/tokens';
 import { SDOLA_ADDRESS } from '@/lib/contracts';
 
+const STALE_AFTER_MS = 60_000;
+const CHECK_INTERVAL_MS = 5_000;
+
 interface EnsoRouteResult {
   amountOut: string | null;
   tx: { data: string; to: string; from: string; value: string } | null;
@@ -27,13 +30,17 @@ export function useEnsoRoute(
   fromAddress: `0x${string}` | undefined,
   slippage: string,
   tokenOut?: `0x${string}`,
+  canAutoRefresh?: boolean,
 ): EnsoRouteResult {
   const [result, setResult] = useState<EnsoRouteResult>(EMPTY);
   const abortRef = useRef(0);
+  const fetchedAtRef = useRef<number>(0);
+  const [refreshCounter, setRefreshCounter] = useState(0);
 
   useEffect(() => {
     if (!tokenIn || !fromAddress || amountInWei === '0' || amountInWei === '') {
       setResult(EMPTY);
+      fetchedAtRef.current = 0;
       return;
     }
 
@@ -50,6 +57,7 @@ export function useEnsoRoute(
           slippage,
         });
         if (abortRef.current !== id) return;
+        fetchedAtRef.current = Date.now();
         setResult({
           amountOut: String(route.amountOut),
           tx: {
@@ -65,6 +73,7 @@ export function useEnsoRoute(
         });
       } catch (err: unknown) {
         if (abortRef.current !== id) return;
+        fetchedAtRef.current = 0;
         setResult({
           ...EMPTY,
           error: err instanceof Error ? err.message : 'Failed to fetch route',
@@ -73,7 +82,18 @@ export function useEnsoRoute(
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [tokenIn, amountInWei, fromAddress, slippage, tokenOut]);
+  }, [tokenIn, amountInWei, fromAddress, slippage, tokenOut, refreshCounter]);
+
+  // Auto-refresh stale routes
+  useEffect(() => {
+    if (!canAutoRefresh) return;
+    const interval = setInterval(() => {
+      if (fetchedAtRef.current > 0 && Date.now() - fetchedAtRef.current >= STALE_AFTER_MS) {
+        setRefreshCounter(c => c + 1);
+      }
+    }, CHECK_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [canAutoRefresh]);
 
   return result;
 }

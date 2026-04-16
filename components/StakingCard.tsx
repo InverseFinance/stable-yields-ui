@@ -150,6 +150,20 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
     : (withdrawSdolaAmount ?? 0n);
   const sdolaWithdrawAmountWei = sdolaWithdrawBN > 0n ? sdolaWithdrawBN.toString() : '0';
 
+  // ── Balance / insufficiency (computed early for canAutoRefresh) ──
+
+  const stakeBalance = isDola(selectedToken.address)
+    ? dolaBalance
+    : isNativeEth(selectedToken.address)
+      ? ethBalanceData?.value
+      : selectedTokenBalance;
+
+  const insufficientBalance = parsedAmount > 0n && (
+    activeTab === 'stake'
+      ? (stakeBalance !== undefined && parsedAmount > stakeBalance)
+      : (!isMaxWithdraw && sdolaBalance !== undefined && sdolaWithdrawBN > 0n && sdolaWithdrawBN > sdolaBalance)
+  );
+
   // ── Enso routes ──
 
   const usingEnsoDeposit = activeTab === 'stake'
@@ -163,12 +177,16 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
     ? (withdrawDestToken.isStablish ? '3' : '30')
     : slippageSetting;
 
+  const canAutoRefreshDeposit = usingEnsoDeposit && ensoStep === 'idle' && parsedAmount > 0n && !insufficientBalance;
+  const canAutoRefreshWithdraw = usingEnsoWithdraw && ensoStep === 'idle' && sdolaWithdrawBN > 0n && !insufficientBalance;
+
   const ensoDepositRoute = useEnsoRoute(
     usingEnsoDeposit ? selectedToken.address : undefined,
     amountInWei,
     address,
     depositSlippage,
     stakingData?.zapAddress || stakingData?.address,
+    canAutoRefreshDeposit,
   );
 
   const ensoWithdrawRoute = useEnsoRoute(
@@ -177,6 +195,7 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
     address,
     withdrawSlippage,
     withdrawDestToken.address,
+    canAutoRefreshWithdraw,
   );
 
   // ── Enso allowance reads (to skip approval if already sufficient) ──
@@ -375,19 +394,7 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
 
   // ── Derived state ──
 
-  const stakeBalance = isDola(selectedToken.address)
-    ? dolaBalance
-    : isNativeEth(selectedToken.address)
-      ? ethBalanceData?.value
-      : selectedTokenBalance;
-
   const needsApproval = activeTab === 'stake' && parsedAmount > 0n && (allowance ?? 0n) < parsedAmount;
-
-  const insufficientBalance = parsedAmount > 0n && (
-    activeTab === 'stake'
-      ? (stakeBalance !== undefined && parsedAmount > stakeBalance)
-      : (!isMaxWithdraw && sdolaBalance !== undefined && sdolaWithdrawBN > 0n && sdolaWithdrawBN > sdolaBalance)
-  );
 
   const isDolaFlowPending = isApproving || isApproveConfirming || isDepositing || isDepositConfirming || isRedeeming || isRedeemConfirming;
   const isEnsoFlowPending = ensoStep !== 'idle' || isEnsoApprovalPending || isEnsoApprovalConfirming || isEnsoRoutePending || isEnsoRouteConfirming;
