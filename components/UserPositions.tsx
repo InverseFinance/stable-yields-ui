@@ -23,13 +23,16 @@ export interface VaultPosition {
 export function UserPositions({
   data,
   tokenPrices,
+  refreshKey,
 }: {
   data: StakingData[];
   tokenPrices: TokenPrices;
+  refreshKey?: number;
 }) {
   const { address, isConnected } = useAccount();
   const [positions, setPositions] = useState<VaultPosition[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isInited, setIsInited] = useState(false);
   const [managingPosition, setManagingPosition] = useState<VaultPosition | null>(null);
 
   const loadPositions = useCallback(async (addr: `0x${string}`) => {
@@ -67,17 +70,18 @@ export function UserPositions({
       console.error('Failed to fetch positions:', err);
     } finally {
       setIsLoading(false);
+      setIsInited(true);
     }
   }, [data]);
 
   useEffect(() => {
     if (address) loadPositions(address);
     else setPositions([]);
-  }, [address, loadPositions]);
+  }, [address, loadPositions, refreshKey]);
 
   const totalYearlyUsd = positions.reduce((prev, curr) => prev+curr.estimatedYearlyYield, 0);
 
-  if (!isConnected || isLoading || (!isLoading && positions.length === 0)) return null;
+  if (!isConnected || (isLoading && !isInited) || (!isLoading && positions.length === 0)) return null;
 
   return (
     <>

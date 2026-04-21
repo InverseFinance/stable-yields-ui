@@ -1,4 +1,5 @@
 'use client';
+import { useState } from 'react';
 import { ChartData, StakingData } from "@/app/types";
 import FuturisticTable from "./ui/futuristic-table";
 import FuturisticChart from "./ui/futuristic-chart";
@@ -66,10 +67,12 @@ export const YieldTable = ({
     usTreasuryYield: number;
     tokenPrices: TokenPrices
 }) => {
+    const [positionsRefreshKey, setPositionsRefreshKey] = useState(0);
+
     return (
         <LanguageProvider>
             <div className="flex flex-col gap-8 w-full px-3 sm:px-0">
-                <UserPositions data={data} tokenPrices={tokenPrices} />
+                <UserPositions data={data} tokenPrices={tokenPrices} refreshKey={positionsRefreshKey} />
                 <FuturisticTable
                     tokenPrices={tokenPrices}
                     usTreasuryYield={usTreasuryYield}
@@ -77,6 +80,7 @@ export const YieldTable = ({
                     data={data?.map(d => ({ ...d, tokens: (d.tokens ? d.tokens : [d]), type: d.isVault ? 'Tokenized Vault' : 'Lending' }))}
                     columns={COLUMNS}
                     timestamp={timestamp}
+                    onDepositSuccess={() => setPositionsRefreshKey(k => k + 1)}
                 />
                 <FuturisticChart data={chartData} />
             </div>

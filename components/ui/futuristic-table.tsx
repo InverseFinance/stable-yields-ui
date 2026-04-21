@@ -49,6 +49,7 @@ export default function FuturisticTable({
   projectCollaterals,
   scrollableBody = true,
   tokenPrices,
+  onDepositSuccess,
 }: {
   timestamp: number;
   usTreasuryYield: number;
@@ -59,6 +60,7 @@ export default function FuturisticTable({
   };
   scrollableBody?: boolean;
   tokenPrices: TokenPrices;
+  onDepositSuccess?: () => void;
 }) {
   const [sortConfig, setSortConfig] = useState<any>({ key: "apy", direction: "desc" });
   const [showModal, setShowModal] = useState(false);
@@ -252,7 +254,7 @@ export default function FuturisticTable({
               </p> */}
 
               <div className="rounded-full">
-                <StakingCard stakingData={pendingItem ? pendingItem : sortedData[0]} tokenPrices={tokenPrices} />
+                <StakingCard stakingData={pendingItem ? pendingItem : sortedData[0]} tokenPrices={tokenPrices} onSuccess={() => { handleDismiss(); onDepositSuccess?.(); }} />
               </div>
 
               <div className="flex gap-4 justify-end pt-3">

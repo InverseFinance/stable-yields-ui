@@ -46,7 +46,7 @@ function withDefaultPrices(tokens: SupportedToken[], prices: TokenPrices): Suppo
   }));
 }
 
-export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: StakingData; tokenPrices?: TokenPrices }) {
+export function StakingCard({ stakingData, tokenPrices = {}, onSuccess: onSuccessProp }: { stakingData: StakingData; tokenPrices?: TokenPrices; onSuccess?: () => void }) {
   const [activeTab, setActiveTab] = useState<Tab>('stake');
   const [amount, setAmount] = useState('');
   const [selectedToken, setSelectedToken] = useState<SupportedToken>(() => withDefaultPrices(SUPPORTED_TOKENS, tokenPrices)[0]);
@@ -291,6 +291,7 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
       refetchAllowance();
       resetDeposit();
       if (address) loadBalances(address);
+      onSuccessProp?.();
     }
   }, [isDepositConfirmed, refetchDola, refetchSdola, refetchAllowance, resetDeposit, address, loadBalances]);
 
@@ -303,6 +304,7 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
       refetchSdola();
       resetRedeem();
       if (address) loadBalances(address);
+      onSuccessProp?.();
     }
   }, [isRedeemConfirmed, refetchDola, refetchSdola, resetRedeem, address, loadBalances]);
 
@@ -389,6 +391,7 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
       refetchSdola();
       if (activeTab === 'stake') refetchSelectedBalance();
       if (address) loadBalances(address);
+      onSuccessProp?.();
     }
   }, [ensoStep, isEnsoRouteConfirmed, resetEnsoRoute, refetchSdola, refetchSelectedBalance, address, loadBalances, activeTab, selectedToken.symbol, withdrawDestToken.symbol, amount]);
 
