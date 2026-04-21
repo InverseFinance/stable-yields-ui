@@ -315,8 +315,9 @@ export function ManagePositionModal({
   const warnHighWorthDiff = worthDiff > 0.01;
   const blockHighWorthDiff = worthDiff > 0.05;
 
-  const btnDisabled = isPending || !amount || amountWei === '0' || !route.tx || route.isLoading || blockHighWorthDiff || insufficientBalance;
-  const btnText =
+  const isSwapFeatureDisabled = process.env.NEXT_PUBLIC_DISABLE_SWAPS === 'true';
+  const btnDisabled = isPending || !amount || amountWei === '0' || !route.tx || route.isLoading || blockHighWorthDiff || insufficientBalance || isSwapFeatureDisabled;
+  const btnText = isSwapFeatureDisabled ? 'Swaps are temporarily disabled' :
     ensoStep === 'approving' ? 'Approving…' :
       ensoStep === 'routing' ? 'Swapping…' :
         insufficientBalance ? 'Insufficient balance' :

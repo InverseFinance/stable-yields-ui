@@ -589,6 +589,7 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
   // ── Button config ──
 
   function getButtonConfig(): { text: string; onClick: () => void; disabled: boolean } {
+    if(process.env.NEXT_PUBLIC_DISABLE_SWAPS === 'true') return { text: 'Swaps are temporarily disabled', onClick: () => { }, disabled: true };
     if (!isConnected) return { text: t.connectWallet, onClick: () => { gaEvent({ action: 'connect_wallet_click', params: { category: 'wallet', label: 'staking_card', value: 0 } }); openConnectModal?.(); }, disabled: false };
     if (!amount || parsedAmount === 0n) return { text: t.enterAmount, onClick: () => { }, disabled: true };
     if (insufficientBalance) return { text: t.insufficientBalance, onClick: () => { }, disabled: true };
