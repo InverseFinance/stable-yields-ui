@@ -6,11 +6,11 @@ import { useAccount, useReadContract, useWriteContract, useWaitForTransactionRec
 import { parseUnits, formatUnits, maxUint256 } from 'viem';
 import { useConnectModal, useAddRecentTransaction } from '@rainbow-me/rainbowkit';
 import { DOLA_ADDRESS, SDOLA_ADDRESS, ERC20_ABI, ERC4626_ABI } from '@/lib/contracts';
-import { formatBalance, formatTokenAmount, formatUsd } from '@/lib/utils';
+import { formatBalance, formatTokenAmount, formatUsd, smartShortNumber } from '@/lib/utils';
 import { SUPPORTED_TOKENS, isDola, isNativeEth, DOLA_TOKEN, type SupportedToken } from '@/lib/tokens';
 import { TokenSelector } from './TokenSelector';
 import { useEnsoRoute } from '@/hooks/useEnsoRoute';
-import { fetchEnsoApproval, fetchEnsoBalances } from '@/lib/enso';
+import { FEE_BPS, fetchEnsoApproval, fetchEnsoBalances } from '@/lib/enso';
 import { SavingsOpportunites, SelectedOpportunity } from './SavingsOpportunities';
 import { gaEvent } from '@/lib/analytics';
 import { addTxToast } from '@/lib/toastStore';
@@ -856,7 +856,7 @@ export function StakingCard({ stakingData, tokenPrices = {} }: { stakingData: St
             {btn.text}
           </button>
           <p className="text-text-muted text-center w-full text-xs">
-            Routing is powered by Enso & inclusive of a 0.1% frontend fee
+            Routing is powered by Enso & inclusive of a {smartShortNumber(FEE_BPS/100, 2)}% frontend fee
           </p>
         </div>
       </div>

@@ -1,6 +1,10 @@
 import { EnsoClient } from '@ensofinance/sdk';
 import { SDOLA_ADDRESS } from '@/lib/contracts';
 
+// fee receiver contract, sweeps go to Inverse Treasury address
+export const FEE_RECEIVER = '0x8dF2fBeBc0fe876e4001b9E89361C5aE02d663d2';
+export const FEE_BPS = 10;
+
 let client: EnsoClient | null = null;
 
 function getClient(): EnsoClient {
@@ -47,8 +51,8 @@ export async function fetchEnsoRoute(params: {
     tokenOut: [params.tokenOut ?? SDOLA_ADDRESS],
     amountIn: [params.amountIn],
     slippage: params.slippage ?? '10',
-    fee: [10],
-    feeReceiver: '0x926dF14a23BE491164dCF93f4c468A50ef659D5B',
+    fee: [FEE_BPS],
+    feeReceiver: FEE_RECEIVER,
   }));
 }
 

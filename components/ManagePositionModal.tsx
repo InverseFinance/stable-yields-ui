@@ -8,7 +8,7 @@ import { type TokenPrices } from '@/lib/fetchTokenPrices';
 import { type StakingData } from '@/app/types';
 import { type VaultPosition } from './UserPositions';
 import { useEnsoRoute } from '@/hooks/useEnsoRoute';
-import { fetchEnsoApproval, fetchEnsoBalances } from '@/lib/enso';
+import { FEE_BPS, fetchEnsoApproval, fetchEnsoBalances } from '@/lib/enso';
 import { ERC20_ABI } from '@/lib/contracts';
 import { TokenSelector, type TokenMeta } from './TokenSelector';
 import { formatUsd, formatTokenAmount, smartShortNumber } from '@/lib/utils';
@@ -467,7 +467,7 @@ export function ManagePositionModal({
             {btnText}
           </button>
           <p className="text-text-muted text-center w-full text-xs">
-            Routing is powered by Enso & inclusive of a 0.1% frontend fee
+            Routing is powered by Enso & inclusive of a {smartShortNumber(FEE_BPS/100, 2)}% frontend fee
           </p>
         </div>
       </div>
