@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { formatUnits } from "viem";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -70,4 +71,34 @@ export const removeTrailingZeros = (num: string) => {
 export const smartShortNumber = (value: number, precision = 2, isDollar = false, showMinPrecision = false) => {
   const num = shortenNumber(value, precision, isDollar, showMinPrecision);
   return removeTrailingZeros(num);
+}
+
+
+export function formatUsd(value: number, precision = 2): string {
+  if (value >= 1_000_000) {
+    return `$${(value / 1_000_000).toFixed(precision)}M`;
+  }
+  if (value >= 1_000) {
+    return `$${(value / 1_000).toFixed(precision)}K`;
+  }
+  return `$${value.toFixed(precision)}`;
+}
+
+export function formatApy(value: number): string {
+  return `${value.toFixed(2)}%`;
+}
+
+export function formatBalance(value: bigint, decimals: number = 18, maxDecimals: number = 4): string {
+  const formatted = formatUnits(value, decimals);
+  const [whole, fraction] = formatted.split('.');
+  if (!fraction) return addCommas(whole);
+  return `${addCommas(whole)}.${fraction.slice(0, maxDecimals)}`;
+}
+
+export function formatTokenAmount(weiValue: string, decimals: number, maxDecimals: number = 4): string {
+  return formatBalance(BigInt(weiValue), decimals, maxDecimals);
+}
+
+function addCommas(n: string): string {
+  return n.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
