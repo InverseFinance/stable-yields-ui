@@ -59,13 +59,15 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           <Web3Provider>
             <div className="min-h-screen flex flex-col">
-              <div className="flex flex-row gap-2 justify-end px-2 py-1">
+              <div className="relative flex flex-row gap-2 justify-center md:justify-end px-2 py-2">
                 <ConnectButton
                   accountStatus={{ smallScreen: 'address', largeScreen: 'full' }}
                   chainStatus={'icon'}
                   showBalance={false}
                 />
-                <ThemeToggle />
+                <div className="absolute md:relative right-2 top-2 md:top-0 md:right-0">
+                  <ThemeToggle />
+                </div>
               </div>
               <main className="flex-1 flex flex-col gap-0 items-center justify-start" style={{ width: '100%', maxWidth: '1000px', margin: '0 auto' }}>
                 {children}
