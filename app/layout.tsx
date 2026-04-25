@@ -23,8 +23,10 @@ export const metadata: Metadata = {
   applicationName: "Stable Yields",
   icons: "/logo.webp",
   authors: [{ name: "Inverse Finance", url: "https://inverse.finance" }],
-  description: "Earn & compare Stable Yields across major DeFi protocols",
-  keywords: ['Stable Yields', 'Yield', 'Stablecoins', 'DeFi', 'Yield-bearing stablecoins', 'Stablecoin Yields', 'DeFi Yields', 'Yield Comparator', 'Yield Table', 'Yield Calculator', 'Yield Rate', 'Yield Rate Table', 'Yield Rate Calculator', 'Yield Rate Comparator', 'Earn Stable Yield', 'Earn Stablecoin yield', 'Earn yield'],
+  description: "Earn & compare Stablecoin Yields across major DeFi protocols",
+  keywords: ['Stable Yields', 'Stablecoin Yields', 'Yield', 'Stablecoins', 'DeFi', 'Yield-bearing stablecoins', 'DeFi Yields', 'Crypto Yield Comparator', 'Crypto Yield Table', 'Crypto Yield Calculator', 'Crypto Yield Rate', 'Crypto Yield Rate Table', 'Crypto Yield Rate Calculator', 'Crypto Yield Rate Comparator', 'Earn Crypto Yield', 'Earn Stablecoin yield', 'Earn crypto yield', 
+    'DeFi Yield Comparator', 'DeFi Yield Table', 'DeFi Yield Calculator', 'DeFi Yield Rate', 'DeFi Yield Rate Table', 'DeFi Yield Rate Calculator', 'DeFi Yield Rate Comparator', 'Earn DeFi Yield', 'Earn Stablecoin yield', 'Earn DeFi yield'
+  ],
 };
 
 export default function RootLayout({
