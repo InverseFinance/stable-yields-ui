@@ -24,14 +24,12 @@ export default function MethodologyPage() {
         </p>
         <ul>
           <li>
-            <strong>Inverse Finance API</strong>, The primary data feed
-            (inverse.finance/api/dola/sdola-comparator) based on onchain calculations provides current APY,
-            30-day and 90-day average APYs, TVL, and pool metadata for all
-            tracked yield-bearing stablecoins. This API aggregates data from
-            on-chain Ethereum smart contracts where the APYs are calculated by looking at the vault exchange rates between now and a historical date, meaning APYs are based on actual historical yield and extrapolated.
+            <strong>Onchain</strong>, The primary source
+            is on calculations based on onchain data using the vault exchange rates between now and a historical date then extrapolated, this is true for the APY,
+            30-day and 90-day APYs, for non-standard ERC4626 vaults we fallback to defillama data or the project's own APIs.
           </li>
           <li>
-            <strong>DeFiLlama Yields API</strong>, Historical APY and TVL data
+            <strong>DeFiLlama Yields API</strong>, Historical APY on charts and TVL data
             is fetched from the DeFiLlama yields API (yields.llama.fi/chart) for
             each tracked pool. DeFiLlama is the industry-standard TVL and yield
             aggregator, sourcing data directly from protocol smart contracts.
@@ -87,34 +85,27 @@ export default function MethodologyPage() {
       </section>
 
       <section>
-        <h2>30-Day and 90-Day Averages</h2>
+        <h2>30-Day and 90-Day values</h2>
         <p>
-          The 30-day and 90-day average APYs are rolling averages computed from
-          daily DeFiLlama yield snapshots. These averages serve an important
-          purpose:
+          The 30-day and 90-day values in the table also rely on the same methodology using onchain data
         </p>
         <ul>
           <li>
             <strong>Smoothing volatility</strong>, Daily APYs can swing
-            dramatically based on short-term market conditions. Averages reveal
+            dramatically based on short-term market conditions. Higher time-ranges reveal
             the sustained yield level.
           </li>
           <li>
             <strong>Trend identification</strong>, Comparing the current APY to
-            the 30d and 90d averages shows whether yields are trending up or
+            the 30d and 90d shows whether yields are trending up or
             down.
           </li>
           <li>
             <strong>Consistency assessment</strong>, A stablecoin where the
-            current APY closely matches its 90d average is likely more
+            current APY closely matches its 90d value is likely more
             predictable than one with large deviations.
           </li>
         </ul>
-        <p>
-          The averages require a minimum of 85 daily data points out of the
-          expected 90 days to be considered valid, allowing tolerance for
-          occasional missing data without displaying misleading results.
-        </p>
       </section>
 
       <section>
@@ -122,13 +113,7 @@ export default function MethodologyPage() {
         <p>
           TVL represents the total USD value of assets deposited into each
           yield-bearing stablecoin&apos;s smart contract. TVL data is sourced
-          from DeFiLlama and supplemented with on-chain{" "}
-          <code>totalAssets</code> reads where available.
-        </p>
-        <p>
-          TVL growth over 90 days is also calculated to show whether a product
-          is attracting or losing capital. This is computed from the earliest and
-          latest DeFiLlama data points within the 90-day window.
+          from DeFiLlama.
         </p>
       </section>
 
@@ -149,6 +134,9 @@ export default function MethodologyPage() {
           </li>
           <li>
             The asset has a DeFiLlama pool listing for verifiable yield data.
+          </li>
+          <li>
+            Note: Aave's USDT & USDC lending yields where previously shown and used as a benchmark reference, but since the Kelpdao incident we decided to unlist those, we will not list anymore yields where deposits are lent out to borrowers.
           </li>
         </ul>
       </section>
@@ -175,13 +163,16 @@ export default function MethodologyPage() {
             <strong>Non-USD stablecoins</strong>, EUR, GBP, or other fiat
             pegged stablecoins are not currently tracked.
           </li>
+          <li>
+            <strong>Lending pools</strong>, vaults where deposits can be lent out to borrowers.
+          </li>
         </ul>
       </section>
 
       <section>
         <h2>Historical Charts</h2>
         <p>
-          The 90-day APY and TVL charts display data for the top 5
+          The 90-day APY chart display data for the top 5
           yield-bearing stablecoins by current APY. Chart data is sourced from
           the DeFiLlama yields API, which provides daily snapshots of APY and
           TVL for each tracked pool. This historical view helps users identify

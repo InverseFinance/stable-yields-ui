@@ -13,12 +13,12 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     slug: "highest-stablecoin-yields",
     question: "What are the highest stablecoin yields right now?",
-    answer: "Stable Yields tracks real-time APYs across all major yield-bearing stablecoins in DeFi. The highest yields change frequently as market conditions shift. Visit our main yield comparison table at stableyields.info to see the current ranking sorted by APY, along with 30-day and 90-day moving averages that reveal which yields are consistently high versus temporarily spiking.",
+    answer: "Stable Yields tracks real-time APYs across all major yield-bearing stablecoins in DeFi. The highest yields change frequently as market conditions shift. Visit our main yield comparison table at stableyields.info to see the current ranking sorted by APY, along with 30-day and 90-day values revealing which yields are consistently high versus temporarily spiking.",
   },
   {
     slug: "how-are-apys-calculated",
     question: "How are these APYs calculated?",
-    answer: "APYs are sourced from a combination of on-chain Ethereum smart contract data and the DeFiLlama yields API. The current APY reflects the annualized rate based on recent vault performance. The 30-day and 90-day averages are rolling averages computed from daily DeFiLlama snapshots, which smooths out short-term volatility and gives a more reliable picture of sustained returns. See our Methodology page for full details.",
+    answer: "APYs are sourced directly onchain by looking at actual historical performances using the vaults echange rates evolution, in some cases another methodology might be used (non-standard ERC4626 vaults etc), visit the Methodology page for more details.",
   },
   {
     slug: "sdola-vs-susds-vs-susde",
