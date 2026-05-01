@@ -7,6 +7,8 @@ import { Web3Provider } from "@/components/web3-provider";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { LanguageProvider } from "@/lib/useLanguage";
 import { Toaster } from "@/components/Toaster";
+import { JsonLd } from "@/components/JsonLd";
+import { buildOrganizationJsonLd } from "@/lib/structured-data";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -19,14 +21,28 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Stable Yields",
+  metadataBase: new URL("https://www.stableyields.info"),
+  title: "Stable Yields - Compare Stablecoin APYs in DeFi",
   applicationName: "Stable Yields",
   icons: "/logo.webp",
-  authors: [{ name: "Inverse Finance", url: "https://inverse.finance" }],
-  description: "Earn & compare Stablecoin Yields across major DeFi protocols",
-  keywords: ['Stable Yields', 'Stablecoin Yields', 'Yield', 'Stablecoins', 'DeFi', 'Yield-bearing stablecoins', 'DeFi Yields', 'Crypto Yield Comparator', 'Crypto Yield Table', 'Crypto Yield Calculator', 'Crypto Yield Rate', 'Crypto Yield Rate Table', 'Crypto Yield Rate Calculator', 'Crypto Yield Rate Comparator', 'Earn Crypto Yield', 'Earn Stablecoin yield', 'Earn crypto yield', 
+  authors: [{ name: "Inverse Finance", url: "https://www.inverse.finance" }],
+  description: "Earn & compare the best stablecoin yields across major DeFi protocols. Free, real-time APY data from DeFiLlama and on-chain sources.",
+  keywords: ['Stable Yields', 'Stablecoin Yields', 'Yield', 'Stablecoins', 'DeFi', 'Yield-bearing stablecoins', 'DeFi Yields', 'Crypto Yield Comparator', 'Crypto Yield Table', 'Crypto Yield Calculator', 'Crypto Yield Rate', 'Crypto Yield Rate Table', 'Crypto Yield Rate Calculator', 'Crypto Yield Rate Comparator', 'Earn Crypto Yield', 'Earn Stablecoin yield', 'Earn crypto yield',
     'DeFi Yield Comparator', 'DeFi Yield Table', 'DeFi Yield Calculator', 'DeFi Yield Rate', 'DeFi Yield Rate Table', 'DeFi Yield Rate Calculator', 'DeFi Yield Rate Comparator', 'Earn DeFi Yield', 'Earn Stablecoin yield', 'Earn DeFi yield'
   ],
+  openGraph: {
+    title: "Stable Yields - Compare Stablecoin APYs in DeFi",
+    description: "Earn & compare the best stablecoin yields across major DeFi protocols. Free, real-time data from DeFiLlama and on-chain sources.",
+    url: "https://www.stableyields.info",
+    siteName: "Stable Yields",
+    type: "website",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary",
+    title: "Stable Yields - Compare Stablecoin APYs",
+    description: "Free, real-time stablecoin yield comparison across DeFi protocols.",
+  },
 };
 
 export default function RootLayout({
@@ -41,6 +57,7 @@ export default function RootLayout({
           async
           src={`https://www.googletagmanager.com/gtag/js?id=G-G09P58GBG3`}
         />
+        <JsonLd data={buildOrganizationJsonLd()} />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -74,9 +91,14 @@ export default function RootLayout({
               <main className="flex-1 flex flex-col gap-0 items-center justify-start" style={{ width: '100%', maxWidth: '1000px', margin: '0 auto' }}>
                 {children}
               </main>
-              <footer className="py-6 flex gap-2 flex-col items-center justify-center">
+              <footer className="py-6 flex gap-4 flex-col items-center justify-center">
+                <div className="flex gap-4 text-sm text-muted-foreground">
+                  <a href="/faq" className="hover:text-foreground transition-colors">FAQ</a>
+                  <a href="/methodology" className="hover:text-foreground transition-colors">Methodology</a>
+                  <a href="/about" className="hover:text-foreground transition-colors">About</a>
+                </div>
                 <a
-                  href="https://inverse.finance"
+                  href="https://www.inverse.finance"
                   target="_blank"
                   className="text-muted-foreground underline"
                 >

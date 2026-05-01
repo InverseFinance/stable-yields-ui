@@ -4,7 +4,7 @@ import { fetchTokenPrices } from "@/lib/fetchTokenPrices";
 
 export async function StableYieldsPageContent({ title, titleSize = 'text-5xl sm:text-8xl lg:text-8xl' }: { title: string, titleSize?: string }) {
   const [stablesRes, usTreasuryRes, tokenPricesRes] = await Promise.allSettled([
-    fetch(`https://inverse.finance/api/dola/sdola-comparator?v=2`),
+    fetch(`https://www.inverse.finance/api/dola/sdola-comparator?v=2`),
     fetch(`https://moneymatter.me/api/treasury/interest-rates`),
     fetchTokenPrices(),
   ])
