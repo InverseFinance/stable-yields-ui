@@ -1,0 +1,42 @@
+# Stable Yields
+> Compare yield-bearing stablecoin APYs across DeFi protocols
+
+## Overview
+Stable Yields (stableyields.info) is a free, real-time comparison tool for yield-bearing stablecoins in decentralized finance (DeFi). Built by Inverse Finance. Data is sourced from Ethereum on-chain smart contracts, DeFiLlama yield APIs, and CoinGecko price feeds. Updated every 5 minutes.
+
+## Tracked Yield-Bearing Stablecoins
+- sDOLA (Inverse Finance / FiRM), staked DOLA, ERC-4626 vault, yield from lending revenue
+- sUSDe (Ethena), staked USDe, delta-neutral ETH strategy yield
+- sUSDS (Sky / formerly Maker), savings USDS, yield from Sky Savings Rate
+- sfrxUSD (Frax Finance), staked frxUSD, yield from Fraxlend and AMO strategies
+- scrvUSD (Curve Finance), savings crvUSD, yield from crvUSD lending markets
+- fxSAVE (f(x) Protocol), savings vault, yield from leveraged ETH demand
+- BOLD (Liquity V2), stability pool yield from borrower interest and liquidations
+
+## Data Points Per Asset
+- Current APY (annual percentage yield)
+- 30-day rolling average APY
+- 90-day rolling average APY
+- Total Value Locked (TVL) in USD
+- 90-day historical APY chart
+- US Treasury benchmark comparison
+
+## Pages
+- /stable-yields, Main yield comparison table with live data
+- /methodology, How data is sourced, how APYs and averages are computed
+- /faq, Common questions about stablecoin yields, safety, and risks
+- /about, About Inverse Finance and this tool
+- /sdola, sDOLA: what it is, how it works, risk profile, live APY
+- /susde, sUSDe: what it is, how it works, risk profile, live APY
+- /susds, sUSDS: what it is, how it works, risk profile, live APY
+- /sfrxusd, sfrxUSD: what it is, how it works, risk profile, live APY
+- /scrvusd, scrvUSD: what it is, how it works, risk profile, live APY
+- /fxsave, fxSAVE: what it is, how it works, risk profile, live APY
+- /ybold, BOLD: what it is, how it works, risk profile, live APY
+
+## Key Facts
+- Viewing and comparing yields is completely free, no account required
+- Swaps through the interface include a 0.1% routing fee via Enso Finance
+- Users can deposit directly through each protocol's own interface to avoid fees
+- All data is sourced from public on-chain data and open APIs
+- Built by Inverse Finance DAO (inverse.finance)
