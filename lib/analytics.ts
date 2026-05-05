@@ -1,6 +1,6 @@
 
 const isProd = () => {
-    return ["https://sdola.inverse.finance", "https://sdola.inverse.finance"].includes(location.origin);
+    return ["https://stableyields.info", "https://www.stableyields.info"].includes(location.origin);
 }
 
 type GTagEvent = {
@@ -13,8 +13,8 @@ type GTagEvent = {
 };
 
 export const gaEvent = ({ action, params }: GTagEvent) => {
-    // if(!isProd()){
-    //     return
-    // }
-    // window.gtag('event', action, params)
+    if(!isProd()){
+        return
+    }
+    window.gtag('event', action, params)
 }
