@@ -85,9 +85,10 @@ export default function FuturisticTable({
   const [showModal, setShowModal] = useState(false);
   const [pendingItem, setPendingItem] = useState<TableData | null>(null);
   const [screenshotData, setScreenshotData] = useState<{
-    rowsAbove: ScreenshotRowData[];
-    rowBelow: ScreenshotRowData | null;
+    rows: ScreenshotRowData[];
+    treasuryLineIndex: number;
     imageMap: Record<string, string>;
+    sortConfig: { key: string; direction: 'asc' | 'desc' };
   } | null>(null);
   const [screenshotKey, setScreenshotKey] = useState(0);
   const screenshotRef = useRef<HTMLDivElement>(null);
@@ -130,12 +131,6 @@ export default function FuturisticTable({
   };
 
   const handleScreenshot = async () => {
-    const byApy = [...data].sort((a, b) => (b.apy ?? 0) - (a.apy ?? 0));
-    let tIndex = usTreasuryYield > 0
-      ? byApy.findIndex(item => (item.apy ?? 0) < usTreasuryYield)
-      : -1;
-    if (tIndex <= 0) tIndex = byApy.length;
-
     const toRow = (item: any): ScreenshotRowData => ({
       symbol: item.symbol || '',
       project: item.project || '',
@@ -147,16 +142,34 @@ export default function FuturisticTable({
       image: item.image || '',
     });
 
-    const rowsAbove = byApy.slice(0, tIndex).map(toRow);
-    const rowBelow = tIndex < byApy.length ? toRow(byApy[tIndex]) : null;
+    // Determine which rows to include and where to place the treasury separator.
+    // - APY sort + valid treasury split → all rows above + 1 below (matches live table)
+    // - Any other sort (or no treasury data) → top 10 rows, no separator
+    let displayItems: any[];
+    let screenshotTreasuryIndex = -1;
+
+    const isApySort = sortConfig.key === 'apy';
+    if (isApySort && usTreasuryYield > 0) {
+      const tIdx = sortConfig.direction === 'desc'
+        ? sortedData.findIndex(item => (item.apy ?? 0) < usTreasuryYield)
+        : sortedData.findIndex(item => (item.apy ?? 0) >= usTreasuryYield);
+      if (tIdx > 0) {
+        displayItems = sortedData.slice(0, tIdx + 1); // rows above + one below
+        screenshotTreasuryIndex = tIdx;
+      } else {
+        displayItems = sortedData;
+      }
+    } else {
+      displayItems = sortedData.slice(0, 10);
+    }
+
+    const rows = displayItems.map(toRow);
 
     // Pre-fetch every image as a data URL BEFORE rendering ScreenshotView.
-    // This means html-to-image never needs to fetch images during toPng —
-    // eliminating the internal image-cache bug that causes all images to look
-    // the same on the second and subsequent screenshots.
-    const allRows = [...rowsAbove, ...(rowBelow ? [rowBelow] : [])];
+    // html-to-image won't need to fetch anything at capture time, eliminating
+    // the internal image-cache bug that corrupts images on repeated captures.
     const rawSrcs = new Set<string>();
-    for (const row of allRows) {
+    for (const row of rows) {
       if (row.image) rawSrcs.add(row.image);
       rawSrcs.add(getProjectImageSrc(row.project));
     }
@@ -167,11 +180,9 @@ export default function FuturisticTable({
       imageEntries.filter(([, v]) => v)
     );
 
-    // Increment key to force full ScreenshotView remount (fresh DOM each time)
-    // and flush synchronously so screenshotRef is attached before we proceed
     flushSync(() => {
       setScreenshotKey(k => k + 1);
-      setScreenshotData({ rowsAbove, rowBelow, imageMap });
+      setScreenshotData({ rows, treasuryLineIndex: screenshotTreasuryIndex, imageMap, sortConfig });
     });
 
     if (!screenshotRef.current) return;
@@ -385,9 +396,10 @@ export default function FuturisticTable({
         <ScreenshotView
           key={screenshotKey}
           ref={screenshotRef}
-          rowsAbove={screenshotData.rowsAbove}
-          rowBelow={screenshotData.rowBelow}
+          rows={screenshotData.rows}
+          treasuryLineIndex={screenshotData.treasuryLineIndex}
           usTreasuryYield={usTreasuryYield}
+          sortConfig={screenshotData.sortConfig}
           imageMap={screenshotData.imageMap}
         />
       )}

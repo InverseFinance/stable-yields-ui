@@ -40,9 +40,6 @@ const COLUMNS = [
   { key: 'tvl',    label: 'TVL' },
 ];
 
-// imageMap: raw image URL → pre-fetched data URL
-// Using data URLs avoids html-to-image fetching images at capture time,
-// which eliminates the internal image-cache corruption bug.
 function renderCell(row: ScreenshotRowData, key: string, imageMap: Record<string, string>) {
   if (key === 'symbol') {
     const src = imageMap[row.image] || row.image;
@@ -71,22 +68,23 @@ function renderCell(row: ScreenshotRowData, key: string, imageMap: Record<string
 }
 
 interface Props {
-  rowsAbove: ScreenshotRowData[];
-  rowBelow: ScreenshotRowData | null;
+  rows: ScreenshotRowData[];
+  /** Index of the first row below the US Treasury yield line, -1 if not applicable */
+  treasuryLineIndex: number;
   usTreasuryYield: number;
+  sortConfig: { key: string; direction: 'asc' | 'desc' };
   imageMap: Record<string, string>;
 }
 
 export const ScreenshotView = forwardRef<HTMLDivElement, Props>(
-  ({ rowsAbove, rowBelow, usTreasuryYield, imageMap }, ref) => {
-    const lastAboveIdx = rowsAbove.length - 1;
-
+  ({ rows, treasuryLineIndex, usTreasuryYield, sortConfig, imageMap }, ref) => {
     return (
       <div
         ref={ref}
         style={{ position: 'absolute', top: '-9999px', left: '-9999px', width: '1024px', zIndex: -1 }}
         className="bg-background"
       >
+        {/* Header — mirrors StableYieldsPageContent */}
         <header className="flex-wrap items-center justify-center py-12">
           <div className="text-center">
             <h1 className="text-5xl sm:text-8xl font-bold text-primary mb-2">Stable Yields</h1>
@@ -96,53 +94,52 @@ export const ScreenshotView = forwardRef<HTMLDivElement, Props>(
           </div>
         </header>
 
+        {/* Table card — mirrors FuturisticTable */}
         <div className="mx-3 bg-container rounded-2xl p-2 sm:p-4 shadow-xl">
           <div className="overflow-x-auto">
-            <div>
-              <table className="w-full text-left text-foreground min-w-[800px]">
-                <thead>
-                  <tr className="text-muted-foreground">
-                    {COLUMNS.map(col => (
-                      <th key={col.key} className="min-w-[125px] p-2 sm:p-3 text-sm sm:text-base lg:text-xl whitespace-nowrap">
-                        {col.label}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {rowsAbove.map((row, i) => (
-                    <tr key={`${row.symbol}-${row.project}`} className={i === lastAboveIdx && rowBelow ? '' : 'table-border'}>
-                      {COLUMNS.map(col => (
-                        <td key={col.key} className="min-w-[125px] p-2 sm:p-3 text-primary-foreground text-sm sm:text-base lg:text-xl font-bold whitespace-nowrap">
-                          {renderCell(row, col.key, imageMap)}
-                        </td>
-                      ))}
-                    </tr>
+            <table className="w-full text-left text-foreground min-w-[800px]">
+              <thead>
+                <tr className="text-muted-foreground">
+                  {COLUMNS.map(col => (
+                    <th key={col.key} className="min-w-[125px] p-2 sm:p-3 text-sm sm:text-base lg:text-xl whitespace-nowrap">
+                      {col.label}{' '}
+                      {sortConfig.key === col.key && (sortConfig.direction === 'asc' ? '▲' : '▼')}
+                    </th>
                   ))}
-
-                  {rowBelow && (
-                    <tr className="table-border" style={{ borderTop: '2px dashed oklch(0.554 0.046 257.417)' }}>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row, i) => {
+                  const isTreasuryRow = treasuryLineIndex > 0 && i === treasuryLineIndex;
+                  const isRowBeforeTreasury = treasuryLineIndex > 0 && i === treasuryLineIndex - 1;
+                  return (
+                    <tr
+                      key={`${row.symbol}-${row.project}-${i}`}
+                      className={isRowBeforeTreasury ? '' : 'table-border'}
+                      style={isTreasuryRow ? { borderTop: '2px dashed oklch(0.554 0.046 257.417)' } : undefined}
+                    >
                       {COLUMNS.map((col, colIdx) => (
                         <td
                           key={col.key}
-                          className={`min-w-[125px] p-2 sm:p-3 text-primary-foreground text-sm sm:text-base lg:text-xl font-bold whitespace-nowrap${colIdx === 0 ? ' relative overflow-visible' : ''}`}
+                          className={`min-w-[125px] p-2 sm:p-3 text-primary-foreground text-sm sm:text-base lg:text-xl font-bold whitespace-nowrap${isTreasuryRow && colIdx === 0 ? ' relative overflow-visible' : ''}`}
                         >
-                          {colIdx === 0 && usTreasuryYield > 0 && (
+                          {isTreasuryRow && colIdx === 0 && usTreasuryYield > 0 && (
                             <span className="absolute top-0 -translate-y-1/2 z-20 text-[12px] sm:text-sm font-semibold whitespace-nowrap shadow-lg bg-container px-3 rounded text-muted-foreground">
                               US Treasury Yield: <b>{usTreasuryYield.toFixed(2)}%</b>
                             </span>
                           )}
-                          {renderCell(rowBelow, col.key, imageMap)}
+                          {renderCell(row, col.key, imageMap)}
                         </td>
                       ))}
                     </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
 
+        {/* Footer */}
         <div className="mt-4 mx-3 pt-3 border-t border-border text-center text-muted-foreground text-sm pb-6">
           https://www.stableyields.info
         </div>
