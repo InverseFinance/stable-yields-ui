@@ -1,12 +1,15 @@
 // @ts-nocheck
 "use client"
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { flushSync } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
+import { Camera } from "lucide-react";
 import { gaEvent, smartShortNumber } from "@/lib/utils";
 import { TokenPrices } from "@/lib/fetchTokenPrices";
 import { StakingCard } from '../StakingCard'
+import { ScreenshotView, ScreenshotRowData } from '../ScreenshotView';
 
 const projectImages = {
   'Frax': 'https://icons.llamao.fi/icons/protocols/frax?w=48&h=48',
@@ -65,6 +68,11 @@ export default function FuturisticTable({
   const [sortConfig, setSortConfig] = useState<any>({ key: "apy", direction: "desc" });
   const [showModal, setShowModal] = useState(false);
   const [pendingItem, setPendingItem] = useState<TableData | null>(null);
+  const [screenshotData, setScreenshotData] = useState<{
+    rowsAbove: ScreenshotRowData[];
+    rowBelow: ScreenshotRowData | null;
+  } | null>(null);
+  const screenshotRef = useRef<HTMLDivElement>(null);
 
   const sortedData = [...data].sort((a, b) => {
     const aValue = a[sortConfig.key] ?? 0;
@@ -101,6 +109,61 @@ export default function FuturisticTable({
   const handleDismiss = () => {
     setShowModal(false);
     setPendingItem(null);
+  };
+
+  const handleScreenshot = async () => {
+    const byApy = [...data].sort((a, b) => (b.apy ?? 0) - (a.apy ?? 0));
+    let tIndex = usTreasuryYield > 0
+      ? byApy.findIndex(item => (item.apy ?? 0) < usTreasuryYield)
+      : -1;
+    if (tIndex <= 0) tIndex = byApy.length;
+
+    const toRow = (item: any): ScreenshotRowData => ({
+      symbol: item.symbol || '',
+      project: item.project || '',
+      projectLabel: item.projectLabel || item.project || '',
+      apy: item.apy || 0,
+      avg30: item.avg30 || 0,
+      avg90: item.avg90 || 0,
+      tvl: item.tvl || 0,
+      image: item.image || '',
+    });
+
+    const rowsAbove = byApy.slice(0, tIndex).map(toRow);
+    const rowBelow = tIndex < byApy.length ? toRow(byApy[tIndex]) : null;
+
+    // flushSync forces a synchronous React commit so screenshotRef is attached immediately
+    flushSync(() => setScreenshotData({ rowsAbove, rowBelow }));
+
+    if (!screenshotRef.current) return;
+
+    // Wait for all images to finish loading
+    const imgs = Array.from(screenshotRef.current.querySelectorAll('img'));
+    await Promise.all(imgs.map(img =>
+      img.complete
+        ? Promise.resolve()
+        : new Promise<void>(res => { img.onload = () => res(); img.onerror = () => res(); })
+    ));
+
+    try {
+      const { toPng } = await import('html-to-image');
+      const isDark = document.documentElement.classList.contains('dark');
+      // The element is positioned off-screen (top/left: -9999px).
+      // Override position in the clone so html-to-image renders it at (0,0)
+      // inside the SVG foreignObject — otherwise the clone is outside the viewport
+      // and the exported PNG is empty.
+      const dataUrl = await toPng(screenshotRef.current, {
+        pixelRatio: 2,
+        backgroundColor: isDark ? 'rgb(19,19,20)' : '#ffffff',
+        style: { position: 'static', top: 'auto', left: 'auto' },
+      });
+      const link = document.createElement('a');
+      link.download = 'stable-yields.png';
+      link.href = dataUrl;
+      link.click();
+    } finally {
+      setScreenshotData(null);
+    }
   };
 
   useEffect(() => {
@@ -216,19 +279,29 @@ export default function FuturisticTable({
             </div>
           </div>
         </div>
-        {timestamp && (
-          <p className="text-muted-foreground text-xs sm:text-sm mt-2">
-            Last updated: {new Date(timestamp).toLocaleString('en-US', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-              second: '2-digit',
-              hour12: false,
-            })}
-          </p>
-        )}
+        <div className="flex items-center justify-between mt-2">
+          {timestamp && (
+            <p className="text-muted-foreground text-xs sm:text-sm">
+              Last updated: {new Date(timestamp).toLocaleString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false,
+              })}
+            </p>
+          )}
+          <button
+            onClick={handleScreenshot}
+            className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground text-xs sm:text-sm transition cursor-pointer ml-auto"
+            title="Download as image"
+          >
+            <Camera size={14} />
+            <span className="hidden sm:inline">Screenshot</span>
+          </button>
+        </div>
       </motion.div>
 
       <AnimatePresence>
@@ -277,6 +350,16 @@ export default function FuturisticTable({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Off-screen screenshot template — rendered only during capture */}
+      {screenshotData && (
+        <ScreenshotView
+          ref={screenshotRef}
+          rowsAbove={screenshotData.rowsAbove}
+          rowBelow={screenshotData.rowBelow}
+          usTreasuryYield={usTreasuryYield}
+        />
+      )}
     </div>
   );
 }
