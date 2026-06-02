@@ -9,7 +9,23 @@ import { Camera } from "lucide-react";
 import { gaEvent, smartShortNumber } from "@/lib/utils";
 import { TokenPrices } from "@/lib/fetchTokenPrices";
 import { StakingCard } from '../StakingCard'
-import { ScreenshotView, ScreenshotRowData } from '../ScreenshotView';
+import { ScreenshotView, ScreenshotRowData, getProjectImageSrc } from '../ScreenshotView';
+
+async function fetchAsDataUrl(src: string): Promise<string> {
+  try {
+    const res = await fetch(`/_next/image?url=${encodeURIComponent(src)}&w=64&q=75`);
+    if (!res.ok) return '';
+    const blob = await res.blob();
+    return await new Promise<string>(resolve => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve((reader.result as string) || '');
+      reader.onerror = () => resolve('');
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return '';
+  }
+}
 
 const projectImages = {
   'Frax': 'https://icons.llamao.fi/icons/protocols/frax?w=48&h=48',
@@ -71,7 +87,9 @@ export default function FuturisticTable({
   const [screenshotData, setScreenshotData] = useState<{
     rowsAbove: ScreenshotRowData[];
     rowBelow: ScreenshotRowData | null;
+    imageMap: Record<string, string>;
   } | null>(null);
+  const [screenshotKey, setScreenshotKey] = useState(0);
   const screenshotRef = useRef<HTMLDivElement>(null);
 
   const sortedData = [...data].sort((a, b) => {
@@ -132,26 +150,37 @@ export default function FuturisticTable({
     const rowsAbove = byApy.slice(0, tIndex).map(toRow);
     const rowBelow = tIndex < byApy.length ? toRow(byApy[tIndex]) : null;
 
-    // flushSync forces a synchronous React commit so screenshotRef is attached immediately
-    flushSync(() => setScreenshotData({ rowsAbove, rowBelow }));
+    // Pre-fetch every image as a data URL BEFORE rendering ScreenshotView.
+    // This means html-to-image never needs to fetch images during toPng —
+    // eliminating the internal image-cache bug that causes all images to look
+    // the same on the second and subsequent screenshots.
+    const allRows = [...rowsAbove, ...(rowBelow ? [rowBelow] : [])];
+    const rawSrcs = new Set<string>();
+    for (const row of allRows) {
+      if (row.image) rawSrcs.add(row.image);
+      rawSrcs.add(getProjectImageSrc(row.project));
+    }
+    const imageEntries = await Promise.all(
+      Array.from(rawSrcs).map(async src => [src, await fetchAsDataUrl(src)] as const)
+    );
+    const imageMap: Record<string, string> = Object.fromEntries(
+      imageEntries.filter(([, v]) => v)
+    );
+
+    // Increment key to force full ScreenshotView remount (fresh DOM each time)
+    // and flush synchronously so screenshotRef is attached before we proceed
+    flushSync(() => {
+      setScreenshotKey(k => k + 1);
+      setScreenshotData({ rowsAbove, rowBelow, imageMap });
+    });
 
     if (!screenshotRef.current) return;
-
-    // Wait for all images to finish loading
-    const imgs = Array.from(screenshotRef.current.querySelectorAll('img'));
-    await Promise.all(imgs.map(img =>
-      img.complete
-        ? Promise.resolve()
-        : new Promise<void>(res => { img.onload = () => res(); img.onerror = () => res(); })
-    ));
 
     try {
       const { toPng } = await import('html-to-image');
       const isDark = document.documentElement.classList.contains('dark');
-      // The element is positioned off-screen (top/left: -9999px).
-      // Override position in the clone so html-to-image renders it at (0,0)
-      // inside the SVG foreignObject — otherwise the clone is outside the viewport
-      // and the exported PNG is empty.
+      // Override the off-screen position in the clone so html-to-image renders
+      // content at (0,0) inside the SVG foreignObject (not at -9999px).
       const dataUrl = await toPng(screenshotRef.current, {
         pixelRatio: 2,
         backgroundColor: isDark ? 'rgb(19,19,20)' : '#ffffff',
@@ -354,10 +383,12 @@ export default function FuturisticTable({
       {/* Off-screen screenshot template — rendered only during capture */}
       {screenshotData && (
         <ScreenshotView
+          key={screenshotKey}
           ref={screenshotRef}
           rowsAbove={screenshotData.rowsAbove}
           rowBelow={screenshotData.rowBelow}
           usTreasuryYield={usTreasuryYield}
+          imageMap={screenshotData.imageMap}
         />
       )}
     </div>
