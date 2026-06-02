@@ -231,6 +231,14 @@ export default function FuturisticTable({
         transition={{ duration: 0.5 }}
       >
         <div className="relative">
+          <button
+            onClick={handleScreenshot}
+            className="absolute -top-3 -right-2 z-20 flex items-center gap-1.5 text-muted-foreground hover:text-foreground text-xs sm:text-sm transition cursor-pointer"
+            title="Download as image"
+          >
+            <Camera size={14} />
+            <span className="hidden sm:inline">Screenshot</span>
+          </button>
           <div className="overflow-x-auto lg:overflow-x-visible">
             <div className={`${scrollableBody ? 'max-h-[60vh]' : ''} `}>
               <table className="w-full text-left text-foreground min-w-[800px]">
@@ -319,29 +327,19 @@ export default function FuturisticTable({
             </div>
           </div>
         </div>
-        <div className="flex items-center justify-between mt-2">
-          {timestamp && (
-            <p className="text-muted-foreground text-xs sm:text-sm">
-              Last updated: {new Date(timestamp).toLocaleString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-                hour12: false,
-              })}
-            </p>
-          )}
-          <button
-            onClick={handleScreenshot}
-            className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground text-xs sm:text-sm transition cursor-pointer ml-auto"
-            title="Download as image"
-          >
-            <Camera size={14} />
-            <span className="hidden sm:inline">Screenshot</span>
-          </button>
-        </div>
+        {timestamp && (
+          <p className="text-muted-foreground text-xs sm:text-sm mt-2">
+            Last updated: {new Date(timestamp).toLocaleString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+              hour12: false,
+            })}
+          </p>
+        )}
       </motion.div>
 
       <AnimatePresence>
