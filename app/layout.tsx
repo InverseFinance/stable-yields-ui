@@ -22,7 +22,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.stableyields.info"),
-  title: "Stable Yields - Compare Stablecoin APYs in DeFi",
+  title: "Stablecoin Yields - Compare the best Stablecoin yields in DeFi",
   applicationName: "Stable Yields",
   icons: "/logo.webp",
   authors: [{ name: "Inverse Finance", url: "https://www.inverse.finance" }],
