@@ -224,6 +224,7 @@ export default function FuturisticTable({
       fetchAsDataUrl(getProjectImageSrc(item.project || '')),
     ]);
 
+    const isDark = document.documentElement.classList.contains('dark');
     const { generatePromoImage } = await import('@/lib/generatePromoImage');
     const promoDataUrl = await generatePromoImage(tableDataUrl, {
       ...item,
@@ -238,8 +239,10 @@ export default function FuturisticTable({
       projectImageUrl,
       link: opportunityLink,
       underlyingStable,
+      underlyingSymbol: assetEntry?.underlyingStable || '',
+      isVault: assetEntry?.mechanism?.toLowerCase().includes('erc-4626') ?? false,
       lockup: assetEntry?.lockup || '',
-    }, rank);
+    }, rank, isDark);
 
     const a = document.createElement('a');
     a.download = `stable-yields-${(item.symbol || 'promo').toLowerCase()}.png`;
