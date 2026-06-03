@@ -246,7 +246,7 @@ export async function generatePromoImage(
   ctx.fillStyle = WHITE;
   ctx.font = `bold 50px ${font}`;
   ctx.fillText(formatTvl(row.tvl), RP_X + statColW, ry + 50);
-  ry += 62;
+  ry += 82;
 
   // 30d / 90d averages (small, below stats)
   const avg30Str = row.avg30 ? `${row.avg30.toFixed(2)}%` : '-';
@@ -263,11 +263,11 @@ export async function generatePromoImage(
   ctx.moveTo(RP_X, ry);
   ctx.lineTo(RP_RIGHT, ry);
   ctx.stroke();
-  ry += 20;
+  ry += 34;
 
   // Bullet list
   const bullets = [
-    'auto-compounding',
+    'Auto-compounding',
     'Zap-in with USDC or another stable',
     ...(row.underlyingStable ? [`Underlying: ${row.underlyingStable}`] : []),
   ];
