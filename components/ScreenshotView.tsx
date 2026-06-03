@@ -140,7 +140,7 @@ export const ScreenshotView = forwardRef<HTMLDivElement, Props>(
         </div>
 
         {/* Footer */}
-        <div className="mt-4 mx-3 pt-3 border-t border-border text-center text-muted-foreground text-sm pb-6">
+        <div className="mt-4 text-xl mx-3 pt-3 border-t border-border text-center text-muted-foreground text-sm pb-6">
           https://www.stableyields.info
         </div>
       </div>

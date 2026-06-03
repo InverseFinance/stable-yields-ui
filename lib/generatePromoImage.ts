@@ -133,18 +133,35 @@ export async function generatePromoImage(
   ctx.font = `14px ${font}`;
   ctx.fillText(`· ${row.projectLabel || row.project}`, lx, TM);
 
-  // Rank badge (top-right)
+  // "● LIVE ON ETHEREUM" + rank badge (top-right)
   const rankText = `STABLE YIELDS RANK  ·  #${rank}`;
+  const liveText = 'LIVE ON ETHEREUM';
   ctx.font = `bold 11px ${font}`;
   const rw = ctx.measureText(rankText).width + 22;
+  const liveW = ctx.measureText(liveText).width;
+  const DOT_R = 4;
+  const LIVE_GAP = 18; // gap between "live" group and rank badge
   const rxBadge = W - 26 - rw;
+  const rxLive = rxBadge - LIVE_GAP - liveW - DOT_R * 2 - 8;
+
+  // Green dot
+  ctx.beginPath();
+  ctx.arc(rxLive + DOT_R, TM, DOT_R, 0, Math.PI * 2);
+  ctx.fillStyle = GREEN;
+  ctx.fill();
+
+  // "LIVE ON ETHEREUM" text
+  ctx.fillStyle = MUTED;
+  ctx.textAlign = 'left';
+  ctx.fillText(liveText, rxLive + DOT_R * 2 + 8, TM);
+
+  // Rank badge
   const ryBadge = TM - 13;
   roundRect(ctx, rxBadge, ryBadge, rw, 26, 4);
   ctx.strokeStyle = GREEN;
   ctx.lineWidth = 1;
   ctx.stroke();
   ctx.fillStyle = GREEN;
-  ctx.textAlign = 'left';
   ctx.fillText(rankText, rxBadge + 11, TM);
 
   // Top bar bottom border
@@ -281,7 +298,6 @@ export async function generatePromoImage(
   // Footer: opportunity link (bottom-right)
   const displayLink = row.link ? formatLink(row.link) : 'stableyields.info';
   ctx.fillStyle = MUTED;
-  ctx.font = `13px ${font}`;
   ctx.textAlign = 'right';
   ctx.fillText(displayLink, RP_RIGHT, H - 18);
 

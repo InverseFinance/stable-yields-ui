@@ -335,7 +335,12 @@ export default function FuturisticTable({
                         animate={{ opacity: 1 }}
                         transition={{ delay: index * 0.1 }}
                         onClick={() => {
-                          if (promoMode) { handlePromoClick(item, index + 1); return; }
+                          if (promoMode) {
+                            const apySorted = [...data].sort((a, b) => (b.apy ?? 0) - (a.apy ?? 0));
+                            const apyRank = apySorted.findIndex(d => d.symbol === item.symbol && d.project === item.project) + 1;
+                            handlePromoClick(item, apyRank || index + 1);
+                            return;
+                          }
                           if (window.innerWidth < 640) handleCta(item);
                         }}
                       >
