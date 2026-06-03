@@ -10,6 +10,7 @@ export interface PromoRowData {
   projectImageUrl: string; // pre-fetched data URL
   link: string;
   underlyingStable: string;
+  underlyingSymbol: string;
 }
 
 function formatTvl(v: number): string {
@@ -286,7 +287,7 @@ export async function generatePromoImage(
   const bullets = [
     'Auto-compounding',
     'Zap-in with USDC or another stable',
-    ...(row.underlyingStable ? [`Underlying: ${row.underlyingStable}`] : []),
+    ...(row.underlyingSymbol ? [`Underlying: ${row.underlyingSymbol}`] : []),
   ];
   ctx.fillStyle = MUTED;
   ctx.font = `13px ${font}`;

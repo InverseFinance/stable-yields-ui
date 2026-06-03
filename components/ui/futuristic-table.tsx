@@ -225,6 +225,7 @@ export default function FuturisticTable({
 
     const { generatePromoImage } = await import('@/lib/generatePromoImage');
     const promoDataUrl = await generatePromoImage(tableDataUrl, {
+      ...item,
       symbol: item.symbol || '',
       project: item.project || '',
       projectLabel: item.projectLabel || item.project || '',
