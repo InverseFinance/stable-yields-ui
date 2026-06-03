@@ -95,6 +95,7 @@ export default function FuturisticTable({
   const screenshotRef = useRef<HTMLDivElement>(null);
   const [showCameraMenu, setShowCameraMenu] = useState(false);
   const [promoMode, setPromoMode] = useState(false);
+  const [isButtonHidden, setIsButtonHidden] = useState(false);
 
   const sortedData = [...data].sort((a, b) => {
     const aValue = a[sortConfig.key] ?? 0;
@@ -281,9 +282,10 @@ export default function FuturisticTable({
           {/* Camera dropdown */}
           <div className="absolute -top-3 -right-2 z-20">
             <button
-              onClick={() => setShowCameraMenu(v => !v)}
+              onClick={() => isButtonHidden ? setIsButtonHidden(false) : setShowCameraMenu(v => !v)}
+              style={{ opacity: isButtonHidden ? 0 : 1 }}
               className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground text-xs sm:text-sm transition cursor-pointer"
-              title="Screenshot options"
+              title={isButtonHidden ? 'Show Screenshot button' : 'Screenshot options'}
             >
               <Camera size={14} />
               <span className="hidden sm:inline">Screenshot</span>
@@ -291,7 +293,7 @@ export default function FuturisticTable({
             {showCameraMenu && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowCameraMenu(false)} />
-                <div className="absolute top-full right-0 mt-1 bg-container border border-border rounded-lg shadow-lg z-50 min-w-[170px] py-1 text-sm">
+                <div className="absolute top-full right-0 mt-1 bg-container border border-border rounded-lg shadow-lg z-50 min-w-[190px] py-1 text-sm">
                   <button
                     className="w-full text-left px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted/40 transition cursor-pointer"
                     onClick={() => { setShowCameraMenu(false); handleScreenshot(); }}
@@ -303,6 +305,12 @@ export default function FuturisticTable({
                     onClick={() => { setShowCameraMenu(false); setPromoMode(true); }}
                   >
                     Highlight one stable
+                  </button>
+                  <button
+                    className="w-full text-left px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted/40 transition cursor-pointer"
+                    onClick={() => { setShowCameraMenu(false); setIsButtonHidden(v => !v); }}
+                  >
+                    {isButtonHidden ? 'Show Screenshot button' : 'Hide Screenshot button'}
                   </button>
                 </div>
               </>
