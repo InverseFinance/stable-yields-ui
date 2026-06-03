@@ -10,6 +10,7 @@ import { gaEvent, smartShortNumber } from "@/lib/utils";
 import { TokenPrices } from "@/lib/fetchTokenPrices";
 import { StakingCard } from '../StakingCard'
 import { ScreenshotView, ScreenshotRowData, getProjectImageSrc } from '../ScreenshotView';
+import { ASSET_CONTENT } from '@/lib/asset-content';
 
 async function fetchAsDataUrl(src: string): Promise<string> {
   try {
@@ -92,6 +93,8 @@ export default function FuturisticTable({
   } | null>(null);
   const [screenshotKey, setScreenshotKey] = useState(0);
   const screenshotRef = useRef<HTMLDivElement>(null);
+  const [showCameraMenu, setShowCameraMenu] = useState(false);
+  const [promoMode, setPromoMode] = useState(false);
 
   const sortedData = [...data].sort((a, b) => {
     const aValue = a[sortConfig.key] ?? 0;
@@ -130,7 +133,8 @@ export default function FuturisticTable({
     setPendingItem(null);
   };
 
-  const handleScreenshot = async () => {
+  // Captures the table as a PNG data URL, reusable for both screenshot and promo.
+  const captureTableDataUrl = async (): Promise<string | null> => {
     const toRow = (item: any): ScreenshotRowData => ({
       symbol: item.symbol || '',
       project: item.project || '',
@@ -142,9 +146,6 @@ export default function FuturisticTable({
       image: item.image || '',
     });
 
-    // Determine which rows to include and where to place the treasury separator.
-    // - APY sort + valid treasury split → all rows above + 1 below (matches live table)
-    // - Any other sort (or no treasury data) → top 10 rows, no separator
     let displayItems: any[];
     let screenshotTreasuryIndex = -1;
 
@@ -154,7 +155,7 @@ export default function FuturisticTable({
         ? sortedData.findIndex(item => (item.apy ?? 0) < usTreasuryYield)
         : sortedData.findIndex(item => (item.apy ?? 0) >= usTreasuryYield);
       if (tIdx > 0) {
-        displayItems = sortedData.slice(0, tIdx + 1); // rows above + one below
+        displayItems = sortedData.slice(0, tIdx + 1);
         screenshotTreasuryIndex = tIdx;
       } else {
         displayItems = sortedData;
@@ -165,9 +166,6 @@ export default function FuturisticTable({
 
     const rows = displayItems.map(toRow);
 
-    // Pre-fetch every image as a data URL BEFORE rendering ScreenshotView.
-    // html-to-image won't need to fetch anything at capture time, eliminating
-    // the internal image-cache bug that corrupts images on repeated captures.
     const rawSrcs = new Set<string>();
     for (const row of rows) {
       if (row.image) rawSrcs.add(row.image);
@@ -185,45 +183,92 @@ export default function FuturisticTable({
       setScreenshotData({ rows, treasuryLineIndex: screenshotTreasuryIndex, imageMap, sortConfig });
     });
 
-    if (!screenshotRef.current) return;
+    if (!screenshotRef.current) return null;
 
     try {
       const { toPng } = await import('html-to-image');
       const isDark = document.documentElement.classList.contains('dark');
-      // Override the off-screen position in the clone so html-to-image renders
-      // content at (0,0) inside the SVG foreignObject (not at -9999px).
-      const dataUrl = await toPng(screenshotRef.current, {
+      return await toPng(screenshotRef.current, {
         pixelRatio: 2,
         backgroundColor: isDark ? 'rgb(19,19,20)' : '#ffffff',
         style: { position: 'static', top: 'auto', left: 'auto' },
       });
-      const link = document.createElement('a');
-      link.download = 'stable-yields.png';
-      link.href = dataUrl;
-      link.click();
     } finally {
       setScreenshotData(null);
     }
   };
 
+  const handleScreenshot = async () => {
+    const dataUrl = await captureTableDataUrl();
+    if (!dataUrl) return;
+    const link = document.createElement('a');
+    link.download = 'stable-yields.png';
+    link.href = dataUrl;
+    link.click();
+  };
+
+  const handlePromoClick = async (item: any, rank: number) => {
+    setPromoMode(false);
+    const tableDataUrl = await captureTableDataUrl();
+    if (!tableDataUrl) return;
+
+    const assetEntry = Object.values(ASSET_CONTENT).find(
+      a => a.symbol.toLowerCase() === (item.symbol || '').toLowerCase()
+    );
+    const underlyingStable = assetEntry?.underlyingStable || '';
+    const opportunityLink = item.link || assetEntry?.issuerUrl || '';
+
+    const [tokenImageUrl, projectImageUrl] = await Promise.all([
+      fetchAsDataUrl(item.image || ''),
+      fetchAsDataUrl(getProjectImageSrc(item.project || '')),
+    ]);
+
+    const { generatePromoImage } = await import('@/lib/generatePromoImage');
+    const promoDataUrl = await generatePromoImage(tableDataUrl, {
+      symbol: item.symbol || '',
+      project: item.project || '',
+      projectLabel: item.projectLabel || item.project || '',
+      apy: item.apy || 0,
+      avg30: item.avg30 || 0,
+      avg90: item.avg90 || 0,
+      tvl: item.tvl || 0,
+      tokenImageUrl,
+      projectImageUrl,
+      link: opportunityLink,
+      underlyingStable,
+    }, rank);
+
+    const a = document.createElement('a');
+    a.download = `stable-yields-${(item.symbol || 'promo').toLowerCase()}.png`;
+    a.href = promoDataUrl;
+    a.click();
+  };
+
   useEffect(() => {
     const handleEscKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && showModal) {
-        handleDismiss();
+      if (event.key === 'Escape') {
+        if (showModal) handleDismiss();
+        if (promoMode) setPromoMode(false);
+        if (showCameraMenu) setShowCameraMenu(false);
       }
     };
-
-    if (showModal) {
-      window.addEventListener('keydown', handleEscKey);
-    }
-
-    return () => {
-      window.removeEventListener('keydown', handleEscKey);
-    };
-  }, [showModal]);
+    window.addEventListener('keydown', handleEscKey);
+    return () => window.removeEventListener('keydown', handleEscKey);
+  }, [showModal, promoMode, showCameraMenu]);
 
   return (
     <div className="w-full">
+      {promoMode && (
+        <div className="flex items-center justify-between mb-2 px-1">
+          <p className="text-sm text-muted-foreground">Click an opportunity to generate a promotion image</p>
+          <button
+            onClick={() => setPromoMode(false)}
+            className="text-xs text-muted-foreground hover:text-foreground transition cursor-pointer ml-4 shrink-0"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
       <motion.div
         className="bg-container backdrop-blur-lg rounded-2xl p-2 sm:p-4 shadow-xl"
         initial={{ opacity: 0, y: 10 }}
@@ -231,14 +276,36 @@ export default function FuturisticTable({
         transition={{ duration: 0.5 }}
       >
         <div className="relative">
-          <button
-            onClick={handleScreenshot}
-            className="absolute -top-3 -right-2 z-20 flex items-center gap-1.5 text-muted-foreground hover:text-foreground text-xs sm:text-sm transition cursor-pointer"
-            title="Download as image"
-          >
-            <Camera size={14} />
-            <span className="hidden sm:inline">Screenshot</span>
-          </button>
+          {/* Camera dropdown */}
+          <div className="absolute -top-3 -right-2 z-20">
+            <button
+              onClick={() => setShowCameraMenu(v => !v)}
+              className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground text-xs sm:text-sm transition cursor-pointer"
+              title="Screenshot options"
+            >
+              <Camera size={14} />
+              <span className="hidden sm:inline">Screenshot</span>
+            </button>
+            {showCameraMenu && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowCameraMenu(false)} />
+                <div className="absolute top-full right-0 mt-1 bg-container border border-border rounded-lg shadow-lg z-50 min-w-[170px] py-1 text-sm">
+                  <button
+                    className="w-full text-left px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted/40 transition cursor-pointer"
+                    onClick={() => { setShowCameraMenu(false); handleScreenshot(); }}
+                  >
+                    Screenshot table
+                  </button>
+                  <button
+                    className="w-full text-left px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted/40 transition cursor-pointer"
+                    onClick={() => { setShowCameraMenu(false); setPromoMode(true); }}
+                  >
+                    Promotion image
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
           <div className="overflow-x-auto lg:overflow-x-visible">
             <div className={`${scrollableBody ? 'max-h-[60vh]' : ''} `}>
               <table className="w-full text-left text-foreground min-w-[800px]">
@@ -262,12 +329,13 @@ export default function FuturisticTable({
                     return (
                       <motion.tr
                         key={index}
-                        className={`${isRowBeforeTreasury ? '' : 'table-border'} hover:bg-muted/50 transition sm:cursor-default cursor-pointer`}
+                        className={`${isRowBeforeTreasury ? '' : 'table-border'} hover:bg-muted/50 transition ${promoMode ? 'cursor-pointer' : 'sm:cursor-default cursor-pointer'}`}
                         style={isTreasuryRow ? { borderTop: '2px dashed oklch(0.554 0.046 257.417)' } : undefined}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: index * 0.1 }}
-                        onClick={(e) => {
+                        onClick={() => {
+                          if (promoMode) { handlePromoClick(item, index + 1); return; }
                           if (window.innerWidth < 640) handleCta(item);
                         }}
                       >
