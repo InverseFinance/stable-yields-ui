@@ -72,6 +72,7 @@ export const ASSET_CONTENT: Record<string, AssetContent> = {
     underlyingStable: "USDe",
     mechanism: "ERC-4626 staking vault",
     chainSupport: ["Ethereum Mainnet"],
+    lockup: '1 day',
     riskFactors: [
       "Funding rate risk, perpetual futures funding can turn negative in bear markets",
       "Custodial risk, relies on centralized exchange infrastructure for the futures leg",

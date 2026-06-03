@@ -237,6 +237,7 @@ export default function FuturisticTable({
       projectImageUrl,
       link: opportunityLink,
       underlyingStable,
+      lockup: assetEntry?.lockup || '',
     }, rank);
 
     const a = document.createElement('a');
@@ -261,7 +262,7 @@ export default function FuturisticTable({
     <div className="w-full">
       {promoMode && (
         <div className="flex items-center justify-between mb-2 px-1">
-          <p className="text-sm text-muted-foreground">Click an opportunity to generate a promotion image</p>
+          <p className="text-sm text-muted-foreground">Click on a yield opportunity to generate an image for it</p>
           <button
             onClick={() => setPromoMode(false)}
             className="text-xs text-muted-foreground hover:text-foreground transition cursor-pointer ml-4 shrink-0"
@@ -295,13 +296,13 @@ export default function FuturisticTable({
                     className="w-full text-left px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted/40 transition cursor-pointer"
                     onClick={() => { setShowCameraMenu(false); handleScreenshot(); }}
                   >
-                    Screenshot table
+                    Screenshot the table
                   </button>
                   <button
                     className="w-full text-left px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted/40 transition cursor-pointer"
                     onClick={() => { setShowCameraMenu(false); setPromoMode(true); }}
                   >
-                    Promotion image
+                    Highlight one stable
                   </button>
                 </div>
               </>

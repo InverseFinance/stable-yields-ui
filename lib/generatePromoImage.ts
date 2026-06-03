@@ -287,6 +287,8 @@ export async function generatePromoImage(
   const bullets = [
     'Auto-compounding',
     'Zap-in with USDC or another stable',
+    ...(row.isVault ? [`ERC-4626 Tokenized Vault`] : []),
+    ...(row.lockup ? [`Lockup: ` + row.lockup] : ['No lockup']),
     ...(row.underlyingSymbol ? [`Underlying: ${row.underlyingSymbol}`] : []),
   ];
   ctx.fillStyle = MUTED;
