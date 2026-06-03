@@ -191,7 +191,7 @@ export default function FuturisticTable({
       return await toPng(screenshotRef.current, {
         pixelRatio: 2,
         backgroundColor: isDark ? 'rgb(19,19,20)' : '#ffffff',
-        style: { position: 'static', top: 'auto', left: 'auto' },
+        style: { position: 'static', top: 'auto', left: 'auto', overflow: 'hidden' },
       });
     } finally {
       setScreenshotData(null);

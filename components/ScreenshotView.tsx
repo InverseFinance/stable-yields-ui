@@ -81,9 +81,11 @@ export const ScreenshotView = forwardRef<HTMLDivElement, Props>(
     return (
       <div
         ref={ref}
-        style={{ position: 'absolute', top: '-9999px', left: '-9999px', width: '1024px', zIndex: -1 }}
+        style={{ position: 'absolute', top: '-9999px', left: '-9999px', width: '1024px', zIndex: -1, overflow: 'hidden' }}
         className="bg-background"
       >
+        {/* Hide all scrollbars inside the foreignObject context that html-to-image creates */}
+        <style>{`* { scrollbar-width: none !important; } *::-webkit-scrollbar { display: none !important; }`}</style>
         {/* Header — mirrors StableYieldsPageContent */}
         <header className="flex-wrap items-center justify-center py-12">
           <div className="text-center">
@@ -96,7 +98,7 @@ export const ScreenshotView = forwardRef<HTMLDivElement, Props>(
 
         {/* Table card — mirrors FuturisticTable */}
         <div className="mx-3 bg-container rounded-2xl p-2 sm:p-4 shadow-xl">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-hidden">
             <table className="w-full text-left text-foreground min-w-[800px]">
               <thead>
                 <tr className="text-muted-foreground">
