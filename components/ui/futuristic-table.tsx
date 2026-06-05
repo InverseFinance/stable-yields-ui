@@ -233,19 +233,19 @@ export default function FuturisticTable({
       fetchAsDataUrl(getProjectImageSrc(item.project || '')),
     ]);
 
-    // Fetch 90-day APY history from DeFiLlama if pool ID is available
-    let apyHistory: { apy: number }[] = [];
+    // Fetch 90-day chart history from DeFiLlama if pool ID is available
+    let chartHistory: { apy: number; tvlUsd: number }[] = [];
     if (item.pool) {
       try {
         const res = await fetch(`https://yields.llama.fi/chart/${item.pool}`);
         const json = await res.json();
         if (json.status === 'success' && Array.isArray(json.data)) {
           const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-          apyHistory = json.data
+          chartHistory = json.data
             .filter((d: any) => d.timestamp >= ninetyDaysAgo)
-            .map((d: any) => ({ apy: d.apy }));
+            .map((d: any) => ({ apy: d.apy, tvlUsd: d.tvlUsd }));
         }
-      } catch { /* sparkline will be skipped */ }
+      } catch { /* sparklines will be skipped */ }
     }
 
     const isDark = document.documentElement.classList.contains('dark');
@@ -266,7 +266,7 @@ export default function FuturisticTable({
       underlyingSymbol: assetEntry?.underlyingStable || '',
       isVault: assetEntry?.mechanism?.toLowerCase().includes('erc-4626') ?? false,
       lockup: assetEntry?.lockup || '',
-      apyHistory,
+      chartHistory,
     }, rank, isDark);
 
     const a = document.createElement('a');

@@ -13,7 +13,7 @@ export interface PromoRowData {
   underlyingSymbol: string;
   isVault?: boolean;
   lockup?: string;
-  apyHistory?: { apy: number }[];
+  chartHistory?: { apy: number; tvlUsd: number }[];
 }
 
 // ── Lucide-compatible SVG paths (viewBox 0 0 24 24, stroke-based) ──────────
@@ -55,12 +55,12 @@ function makeLucideIcon(paths: string, color: string, size: number): Promise<HTM
 
 function drawSparkline(
   ctx: CanvasRenderingContext2D,
-  points: { apy: number }[],
+  points: { value: number }[],
   x: number, y: number, w: number, h: number,
   color: string,
   isDark: boolean,
 ) {
-  const values = points.map(p => p.apy).filter(v => typeof v === 'number' && !isNaN(v) && v >= 0);
+  const values = points.map(p => p.value).filter(v => typeof v === 'number' && !isNaN(v) && v >= 0);
   if (values.length < 2) return;
   const minV = Math.min(...values);
   const maxV = Math.max(...values);
@@ -344,66 +344,7 @@ export async function generatePromoImage(
   drawSep(ry);
   ry += 28;
 
-  // ── APY card: value (left) + 90d sparkline (right) ───────────────────────
-  const APY_CARD_H = 100;
-  const apyCardDivX = Math.round(RP_X + RP_W / 2);
-
-  roundRect(ctx, RP_X, ry, RP_W, APY_CARD_H, 12);
-  ctx.fillStyle = CARD_BG; ctx.fill();
-  ctx.strokeStyle = BORDER; ctx.lineWidth = 1; ctx.stroke();
-
-  // APY label + value — centered in left half
-  const apyCenterX = Math.round(RP_X + RP_W / 4);
-  const apyBlockH = 62;
-  const apyTopY = ry + (APY_CARD_H - apyBlockH) / 2;
-
-  ctx.textAlign = 'center';
-  ctx.fillStyle = TEXT;
-  ctx.font = `bold 18px ${font}`;
-  ctx.textBaseline = 'alphabetic';
-  ctx.fillText('APY', apyCenterX, apyTopY + 13);
-
-  ctx.fillStyle = GREEN;
-  ctx.font = `bold 50px ${font}`;
-  ctx.fillText(row.apy ? `${row.apy.toFixed(2)}%` : '-', apyCenterX, apyTopY + 62);
-
-  // Card vertical divider
-  ctx.strokeStyle = BORDER; ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(apyCardDivX, ry + 12); ctx.lineTo(apyCardDivX, ry + APY_CARD_H - 12);
-  ctx.stroke();
-
-  // Sparkline — right half
-  const sparkPad = 14;
-  const sparkX = apyCardDivX + sparkPad;
-  const sparkY = ry + sparkPad;
-  const sparkW = RP_RIGHT - apyCardDivX - sparkPad * 2;
-  const sparkH = APY_CARD_H - sparkPad * 2;
-
-  ctx.fillStyle = MUTED;
-  ctx.font = `9px ${font}`;
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'top';
-  ctx.fillText('90d APY', sparkX, sparkY - 2);
-
-  if (row.apyHistory && row.apyHistory.length > 1) {
-    drawSparkline(ctx, row.apyHistory, sparkX, sparkY + 10, sparkW, sparkH - 10, GREEN, isDark);
-  } else {
-    ctx.fillStyle = MUTED;
-    ctx.font = `11px ${font}`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    const rightCX = Math.round(apyCardDivX + (RP_RIGHT - apyCardDivX) / 2);
-    ctx.fillText(`30d: ${row.avg30 ? row.avg30.toFixed(2) + '%' : '-'}`, rightCX, ry + APY_CARD_H / 2 - 8);
-    ctx.fillText(`90d: ${row.avg90 ? row.avg90.toFixed(2) + '%' : '-'}`, rightCX, ry + APY_CARD_H / 2 + 8);
-  }
-
-  ry += APY_CARD_H + 16;
-
-  drawSep(ry);
-  ry += 22;
-
-  // ── Info card: TVL (left) + list items (right) ────────────────────────────
+  // ── Combined 2×2 card: APY row (top) + TVL row (bottom) ─────────────────
   const bullets: { icon: string; text: string }[] = [
     { icon: 'recycle', text: 'Auto-compounding' },
     { icon: 'zap',     text: 'Zap-in with USDC or stablecoin' },
@@ -414,58 +355,98 @@ export async function generatePromoImage(
     ...(row.underlyingSymbol ? [{ icon: 'layers', text: `Underlying: ${row.underlyingSymbol}` }] : []),
   ];
 
-  const CARD_PAD_Y = 20;
-  const LINE_H = 28;
-  const cardH = Math.max(CARD_PAD_Y * 2 + 74, CARD_PAD_Y * 2 + bullets.length * LINE_H + 4);
-  // Divider at the horizontal midpoint of the card
-  const cardDivX = Math.round(RP_X + RP_W / 2);
+  const ROW_H = 90;
+  const COMBO_CARD_H = ROW_H * 2 + 1;
+  const combDivX = Math.round(RP_X + RP_W / 2);
+  const valueCX = Math.round(RP_X + RP_W / 4);
+  const blockH = 62;
 
-  roundRect(ctx, RP_X, ry, RP_W, cardH, 12);
+  roundRect(ctx, RP_X, ry, RP_W, COMBO_CARD_H, 12);
   ctx.fillStyle = CARD_BG; ctx.fill();
   ctx.strokeStyle = BORDER; ctx.lineWidth = 1; ctx.stroke();
 
-  // TVL label + value — centered in the left half
-  const tvlCenterX = Math.round(RP_X + RP_W / 4);
-  // Vertically center the two-line TVL block inside the card
-  const tvlBlockH = 62; // approx: label baseline (13) to value baseline (62) + descenders
-  const tvlTopY = ry + (cardH - tvlBlockH) / 2;
-
-  ctx.textAlign = 'center';
-  ctx.fillStyle = TEXT;
-  ctx.font = `bold 18px ${font}`;
-  ctx.textBaseline = 'alphabetic';
-  ctx.fillText('TVL', tvlCenterX, tvlTopY + 13);
-
-  ctx.fillStyle = GREEN;
-  ctx.font = `bold 50px ${font}`;
-  ctx.fillText(formatTvl(row.tvl), tvlCenterX, tvlTopY + 62);
-
-  // Card vertical divider
-  ctx.strokeStyle = BORDER; ctx.lineWidth = 1;
+  // Vertical divider (full card height)
   ctx.beginPath();
-  ctx.moveTo(cardDivX, ry + 12); ctx.lineTo(cardDivX, ry + cardH - 12);
+  ctx.moveTo(combDivX, ry + 8); ctx.lineTo(combDivX, ry + COMBO_CARD_H - 8);
   ctx.stroke();
 
-  // Bullet list — Lucide icons (no badge, green stroke only)
-  // Vertically center list items within the card
-  const listX = cardDivX + 16;
-  const listContentH = bullets.length * LINE_H;
-  let listY = ry + (cardH - listContentH) / 2 + LINE_H / 2;
+  // Horizontal divider (between rows)
+  ctx.beginPath();
+  ctx.moveTo(RP_X + 12, ry + ROW_H); ctx.lineTo(RP_RIGHT - 12, ry + ROW_H);
+  ctx.stroke();
+
+  // Sparkline layout constants (right cells)
+  const SP_PAD_X = 14;
+  const SP_PAD_Y = 8;
+  const YLABEL_W = 32;
+  const LABEL_H = 14; // height reserved for "90d …" label
+  const chartLX = combDivX + SP_PAD_X + YLABEL_W;
+  const chartW = RP_RIGHT - SP_PAD_X - chartLX;
+  const chartRowH = ROW_H - SP_PAD_Y * 2 - LABEL_H;
+  const chartRowY = (rowIdx: number) => ry + rowIdx * ROW_H + SP_PAD_Y + LABEL_H;
+
+  // ── APY row ──────────────────────────────────────────────────────────────
+  const apyTopY = ry + (ROW_H - blockH) / 2;
+  ctx.textAlign = 'center';
+  ctx.fillStyle = TEXT; ctx.font = `bold 18px ${font}`; ctx.textBaseline = 'alphabetic';
+  ctx.fillText('APY', valueCX, apyTopY + 13);
+  ctx.fillStyle = GREEN; ctx.font = `bold 50px ${font}`;
+  ctx.fillText(row.apy ? `${row.apy.toFixed(2)}%` : '-', valueCX, apyTopY + 62);
+
+  ctx.fillStyle = MUTED; ctx.font = `bold 11px ${font}`;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.fillText('90d APY', combDivX + SP_PAD_X, ry + SP_PAD_Y);
+
+  const apyPts = (row.chartHistory || []).map(p => ({ value: p.apy }));
+  const apyVals = apyPts.map(p => p.value).filter(v => !isNaN(v) && v >= 0);
+  if (apyVals.length >= 2) {
+    ctx.fillStyle = MUTED; ctx.font = `8px ${font}`; ctx.textAlign = 'right';
+    ctx.textBaseline = 'top';
+    ctx.fillText(`${Math.max(...apyVals).toFixed(1)}%`, combDivX + SP_PAD_X + YLABEL_W - 2, chartRowY(0));
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(`${Math.min(...apyVals).toFixed(1)}%`, combDivX + SP_PAD_X + YLABEL_W - 2, chartRowY(0) + chartRowH);
+    drawSparkline(ctx, apyPts, chartLX, chartRowY(0), chartW, chartRowH, GREEN, isDark);
+  }
+
+  // ── TVL row ───────────────────────────────────────────────────────────────
+  const tvlTopY = ry + ROW_H + (ROW_H - blockH) / 2;
+  ctx.textAlign = 'center';
+  ctx.fillStyle = TEXT; ctx.font = `bold 18px ${font}`; ctx.textBaseline = 'alphabetic';
+  ctx.fillText('TVL', valueCX, tvlTopY + 13);
+  ctx.fillStyle = GREEN; ctx.font = `bold 50px ${font}`;
+  ctx.fillText(formatTvl(row.tvl), valueCX, tvlTopY + 62);
+
+  ctx.fillStyle = MUTED; ctx.font = `bold 11px ${font}`;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.fillText('90d TVL', combDivX + SP_PAD_X, ry + ROW_H + SP_PAD_Y);
+
+  const tvlPts = (row.chartHistory || []).map(p => ({ value: p.tvlUsd }));
+  const tvlVals = tvlPts.map(p => p.value).filter(v => !isNaN(v) && v >= 0);
+  if (tvlVals.length >= 2) {
+    ctx.fillStyle = MUTED; ctx.font = `8px ${font}`; ctx.textAlign = 'right';
+    ctx.textBaseline = 'top';
+    ctx.fillText(formatTvl(Math.max(...tvlVals)), combDivX + SP_PAD_X + YLABEL_W - 2, chartRowY(1));
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(formatTvl(Math.min(...tvlVals)), combDivX + SP_PAD_X + YLABEL_W - 2, chartRowY(1) + chartRowH);
+    drawSparkline(ctx, tvlPts, chartLX, chartRowY(1), chartW, chartRowH, GREEN, isDark);
+  }
+
+  ry += COMBO_CARD_H + 16;
+
+  // ── Bullet list (no card container) ──────────────────────────────────────
+  const LINE_H = 28;
   const ICON_DRAW = 16;
+  let listY = ry + LINE_H / 2;
 
   for (const bullet of bullets) {
     const iconKey = BULLET_ICON_KEY[bullet.icon] ?? 'repeat';
     const iconImg = lucideImgs[iconKey];
-    const iconTop = Math.round(listY - ICON_DRAW / 2);
-    if (iconImg) {
-      ctx.drawImage(iconImg, listX, iconTop, ICON_DRAW, ICON_DRAW);
-    }
-
+    if (iconImg) ctx.drawImage(iconImg, RP_X, Math.round(listY - ICON_DRAW / 2), ICON_DRAW, ICON_DRAW);
     ctx.fillStyle = MUTED;
     ctx.font = `13px ${font}`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(bullet.text, listX + ICON_DRAW + 8, listY);
+    ctx.fillText(bullet.text, RP_X + ICON_DRAW + 8, listY);
     listY += LINE_H;
   }
 
