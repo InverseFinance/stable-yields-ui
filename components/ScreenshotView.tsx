@@ -74,10 +74,12 @@ interface Props {
   usTreasuryYield: number;
   sortConfig: { key: string; direction: 'asc' | 'desc' };
   imageMap: Record<string, string>;
+  highlightedSymbol?: string;
+  highlightedProject?: string;
 }
 
 export const ScreenshotView = forwardRef<HTMLDivElement, Props>(
-  ({ rows, treasuryLineIndex, usTreasuryYield, sortConfig, imageMap }, ref) => {
+  ({ rows, treasuryLineIndex, usTreasuryYield, sortConfig, imageMap, highlightedSymbol, highlightedProject }, ref) => {
     return (
       <div
         ref={ref}
@@ -99,7 +101,7 @@ export const ScreenshotView = forwardRef<HTMLDivElement, Props>(
         {/* Table card — mirrors FuturisticTable */}
         <div className="mx-3 bg-container rounded-2xl p-2 sm:p-4 shadow-xl">
           <div className="overflow-x-hidden">
-            <table className="w-full text-left text-foreground min-w-[800px]">
+            <table className="w-full text-left text-foreground min-w-[800px]" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
               <thead>
                 <tr className="text-muted-foreground">
                   {COLUMNS.map(col => (
@@ -114,25 +116,38 @@ export const ScreenshotView = forwardRef<HTMLDivElement, Props>(
                 {rows.map((row, i) => {
                   const isTreasuryRow = treasuryLineIndex > 0 && i === treasuryLineIndex;
                   const isRowBeforeTreasury = treasuryLineIndex > 0 && i === treasuryLineIndex - 1;
+                  const isHighlighted = !!(highlightedSymbol && row.symbol === highlightedSymbol && row.project === highlightedProject);
+                  const HL_COLOR = 'rgba(16,208,122,0.65)';
                   return (
                     <tr
                       key={`${row.symbol}-${row.project}-${i}`}
                       className={isRowBeforeTreasury ? '' : 'table-border'}
                       style={isTreasuryRow ? { borderTop: '2px dashed oklch(0.554 0.046 257.417)' } : undefined}
                     >
-                      {COLUMNS.map((col, colIdx) => (
-                        <td
-                          key={col.key}
-                          className={`min-w-[125px] p-2 sm:p-3 text-primary-foreground text-sm sm:text-base lg:text-xl font-bold whitespace-nowrap${isTreasuryRow && colIdx === 0 ? ' relative overflow-visible' : ''}`}
-                        >
-                          {isTreasuryRow && colIdx === 0 && usTreasuryYield > 0 && (
-                            <span className="absolute top-0 -translate-y-1/2 z-20 text-[12px] sm:text-sm font-semibold whitespace-nowrap shadow-lg bg-container px-3 rounded text-muted-foreground">
-                              US Treasury Yield: <b>{usTreasuryYield.toFixed(2)}%</b>
-                            </span>
-                          )}
-                          {renderCell(row, col.key, imageMap)}
-                        </td>
-                      ))}
+                      {COLUMNS.map((col, colIdx) => {
+                        const isFirst = colIdx === 0;
+                        const isLast = colIdx === COLUMNS.length - 1;
+                        return (
+                          <td
+                            key={col.key}
+                            className={`min-w-[125px] p-2 sm:p-3 text-primary-foreground text-sm sm:text-base lg:text-xl font-bold whitespace-nowrap${isTreasuryRow && isFirst ? ' relative overflow-visible' : ''}`}
+                            style={isHighlighted ? {
+                              backgroundColor: 'rgba(16,208,122,0.08)',
+                              borderTop: `2px solid ${HL_COLOR}`,
+                              borderBottom: `2px solid ${HL_COLOR}`,
+                              ...(isFirst ? { borderLeft: `2px solid ${HL_COLOR}`, borderRadius: '8px 0 0 8px', paddingLeft: '10px' } : {}),
+                              ...(isLast  ? { borderRight: `2px solid ${HL_COLOR}`, borderRadius: '0 8px 8px 0' } : {}),
+                            } : undefined}
+                          >
+                            {isTreasuryRow && isFirst && usTreasuryYield > 0 && (
+                              <span className="absolute top-0 -translate-y-1/2 z-20 text-[12px] sm:text-sm font-semibold whitespace-nowrap shadow-lg bg-container px-3 rounded text-muted-foreground">
+                                US Treasury Yield: <b>{usTreasuryYield.toFixed(2)}%</b>
+                              </span>
+                            )}
+                            {renderCell(row, col.key, imageMap)}
+                          </td>
+                        );
+                      })}
                     </tr>
                   );
                 })}

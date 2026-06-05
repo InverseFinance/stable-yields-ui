@@ -90,6 +90,8 @@ export default function FuturisticTable({
     treasuryLineIndex: number;
     imageMap: Record<string, string>;
     sortConfig: { key: string; direction: 'asc' | 'desc' };
+    highlightedSymbol?: string;
+    highlightedProject?: string;
   } | null>(null);
   const [screenshotKey, setScreenshotKey] = useState(0);
   const screenshotRef = useRef<HTMLDivElement>(null);
@@ -135,7 +137,7 @@ export default function FuturisticTable({
   };
 
   // Captures the table as a PNG data URL, reusable for both screenshot and promo.
-  const captureTableDataUrl = async (): Promise<string | null> => {
+  const captureTableDataUrl = async (highlight?: { symbol: string; project: string }): Promise<string | null> => {
     const toRow = (item: any): ScreenshotRowData => ({
       symbol: item.symbol || '',
       project: item.project || '',
@@ -181,7 +183,14 @@ export default function FuturisticTable({
 
     flushSync(() => {
       setScreenshotKey(k => k + 1);
-      setScreenshotData({ rows, treasuryLineIndex: screenshotTreasuryIndex, imageMap, sortConfig });
+      setScreenshotData({
+        rows,
+        treasuryLineIndex: screenshotTreasuryIndex,
+        imageMap,
+        sortConfig,
+        highlightedSymbol: highlight?.symbol,
+        highlightedProject: highlight?.project,
+      });
     });
 
     if (!screenshotRef.current) return null;
@@ -210,7 +219,7 @@ export default function FuturisticTable({
 
   const handlePromoClick = async (item: any, rank: number) => {
     setPromoMode(false);
-    const tableDataUrl = await captureTableDataUrl();
+    const tableDataUrl = await captureTableDataUrl({ symbol: item.symbol || '', project: item.project || '' });
     if (!tableDataUrl) return;
 
     const assetEntry = Object.values(ASSET_CONTENT).find(
@@ -485,6 +494,8 @@ export default function FuturisticTable({
           usTreasuryYield={usTreasuryYield}
           sortConfig={screenshotData.sortConfig}
           imageMap={screenshotData.imageMap}
+          highlightedSymbol={screenshotData.highlightedSymbol}
+          highlightedProject={screenshotData.highlightedProject}
         />
       )}
     </div>
