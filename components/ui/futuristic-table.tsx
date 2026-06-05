@@ -229,9 +229,24 @@ export default function FuturisticTable({
     const opportunityLink = item.link || assetEntry?.issuerUrl || '';
 
     const [tokenImageUrl, projectImageUrl] = await Promise.all([
-      fetchAsDataUrl(item.image || ''),
+      fetchAsDataUrl(item.largeImage || item.image || ''),
       fetchAsDataUrl(getProjectImageSrc(item.project || '')),
     ]);
+
+    // Fetch 90-day APY history from DeFiLlama if pool ID is available
+    let apyHistory: { apy: number }[] = [];
+    if (item.pool) {
+      try {
+        const res = await fetch(`https://yields.llama.fi/chart/${item.pool}`);
+        const json = await res.json();
+        if (json.status === 'success' && Array.isArray(json.data)) {
+          const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+          apyHistory = json.data
+            .filter((d: any) => d.timestamp >= ninetyDaysAgo)
+            .map((d: any) => ({ apy: d.apy }));
+        }
+      } catch { /* sparkline will be skipped */ }
+    }
 
     const isDark = document.documentElement.classList.contains('dark');
     const { generatePromoImage } = await import('@/lib/generatePromoImage');
@@ -251,6 +266,7 @@ export default function FuturisticTable({
       underlyingSymbol: assetEntry?.underlyingStable || '',
       isVault: assetEntry?.mechanism?.toLowerCase().includes('erc-4626') ?? false,
       lockup: assetEntry?.lockup || '',
+      apyHistory,
     }, rank, isDark);
 
     const a = document.createElement('a');

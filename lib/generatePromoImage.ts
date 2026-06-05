@@ -13,6 +13,7 @@ export interface PromoRowData {
   underlyingSymbol: string;
   isVault?: boolean;
   lockup?: string;
+  apyHistory?: { apy: number }[];
 }
 
 // ── Lucide-compatible SVG paths (viewBox 0 0 24 24, stroke-based) ──────────
@@ -50,6 +51,43 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 function makeLucideIcon(paths: string, color: string, size: number): Promise<HTMLImageElement> {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="${color}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
   return loadImage(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`);
+}
+
+function drawSparkline(
+  ctx: CanvasRenderingContext2D,
+  points: { apy: number }[],
+  x: number, y: number, w: number, h: number,
+  color: string,
+  isDark: boolean,
+) {
+  const values = points.map(p => p.apy).filter(v => typeof v === 'number' && !isNaN(v) && v >= 0);
+  if (values.length < 2) return;
+  const minV = Math.min(...values);
+  const maxV = Math.max(...values);
+  const range = maxV - minV || 1;
+  const toX = (i: number) => x + (i / (values.length - 1)) * w;
+  const toY = (v: number) => y + h - ((v - minV) / range) * h * 0.84 - h * 0.08;
+
+  const grad = ctx.createLinearGradient(x, y, x, y + h);
+  grad.addColorStop(0, isDark ? 'rgba(16,208,122,0.22)' : 'rgba(10,171,97,0.18)');
+  grad.addColorStop(1, 'rgba(16,208,122,0.0)');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  values.forEach((v, i) => { i === 0 ? ctx.moveTo(toX(i), toY(v)) : ctx.lineTo(toX(i), toY(v)); });
+  ctx.lineTo(toX(values.length - 1), y + h);
+  ctx.lineTo(x, y + h);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  values.forEach((v, i) => { i === 0 ? ctx.moveTo(toX(i), toY(v)) : ctx.lineTo(toX(i), toY(v)); });
+  ctx.stroke();
+  ctx.restore();
 }
 
 function roundRect(
@@ -278,11 +316,16 @@ export async function generatePromoImage(
 
   ctx.textAlign = 'left';
 
+  // Token logo inline with symbol
+  const HEADER_LOGO_R = 26;
+  const symbolBaseline = ry + 62;
+  drawLogo(tokenImg, RP_X + HEADER_LOGO_R, symbolBaseline - 22, HEADER_LOGO_R);
+
   // Token symbol (large)
   ctx.fillStyle = TEXT;
   ctx.font = `bold 62px ${font}`;
   ctx.textBaseline = 'alphabetic';
-  ctx.fillText(row.symbol, RP_X, ry + 62);
+  ctx.fillText(row.symbol, RP_X + HEADER_LOGO_R * 2 + 14, symbolBaseline);
   ry += 72;
 
   // RANKS #N (green)
@@ -295,61 +338,67 @@ export async function generatePromoImage(
   ry += 20;
   ctx.fillStyle = MUTED;
   ctx.font = `13px ${font}`;
-  ctx.fillText('on  STABLE YIELDS', RP_X, ry);
+  ctx.fillText('on stableyields.info', RP_X, ry);
   ry += 26;
 
   drawSep(ry);
   ry += 28;
 
-  // ── APY section: token logo | vertical spacer | APY ──────────────────────
-  const LOGO_SIZE = 30; // radius
-  const APY_SECTION_H = 96;
-  const logoCX = RP_X + LOGO_SIZE;
-  const logoCY = ry + APY_SECTION_H / 2;
+  // ── APY card: value (left) + 90d sparkline (right) ───────────────────────
+  const APY_CARD_H = 100;
+  const apyCardDivX = Math.round(RP_X + RP_W / 2);
 
-  drawLogo(tokenImg, logoCX, logoCY, LOGO_SIZE);
+  roundRect(ctx, RP_X, ry, RP_W, APY_CARD_H, 12);
+  ctx.fillStyle = CARD_BG; ctx.fill();
+  ctx.strokeStyle = BORDER; ctx.lineWidth = 1; ctx.stroke();
 
-  // Vertical spacer
-  const VSEP_X = RP_X + LOGO_SIZE * 2 + 20;
-  const vsepGrad = ctx.createLinearGradient(VSEP_X, ry, VSEP_X, ry + APY_SECTION_H);
-  vsepGrad.addColorStop(0, 'rgba(16,208,122,0)');
-  vsepGrad.addColorStop(0.3, isDark ? 'rgba(255,255,255,0.2)' : 'rgba(15,23,42,0.25)');
-  vsepGrad.addColorStop(0.7, isDark ? 'rgba(255,255,255,0.2)' : 'rgba(15,23,42,0.25)');
-  vsepGrad.addColorStop(1, 'rgba(16,208,122,0)');
-  ctx.strokeStyle = vsepGrad; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(VSEP_X, ry); ctx.lineTo(VSEP_X, ry + APY_SECTION_H); ctx.stroke();
+  // APY label + value — centered in left half
+  const apyCenterX = Math.round(RP_X + RP_W / 4);
+  const apyBlockH = 62;
+  const apyTopY = ry + (APY_CARD_H - apyBlockH) / 2;
 
-  // APY (right of spacer)
-  const APY_X = VSEP_X + 22;
-  const apyStr = row.apy ? row.apy.toFixed(2) : '-';
-
+  ctx.textAlign = 'center';
   ctx.fillStyle = TEXT;
   ctx.font = `bold 18px ${font}`;
   ctx.textBaseline = 'alphabetic';
-  ctx.fillText('APY', APY_X, ry + 16);
+  ctx.fillText('APY', apyCenterX, apyTopY + 13);
 
-  // APY number
   ctx.fillStyle = GREEN;
-  ctx.font = `bold 76px ${font}`;
-  const apyBaseline = ry + APY_SECTION_H - 4;
-  ctx.fillText(apyStr, APY_X, apyBaseline);
-  if (row.apy) {
-    const apyW = ctx.measureText(apyStr).width;
-    ctx.fillStyle = GREEN; // reset after measure
-    ctx.font = `bold 30px ${font}`;
-    ctx.fillText('%', APY_X + apyW + 3, apyBaseline);
+  ctx.font = `bold 50px ${font}`;
+  ctx.fillText(row.apy ? `${row.apy.toFixed(2)}%` : '-', apyCenterX, apyTopY + 62);
+
+  // Card vertical divider
+  ctx.strokeStyle = BORDER; ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(apyCardDivX, ry + 12); ctx.lineTo(apyCardDivX, ry + APY_CARD_H - 12);
+  ctx.stroke();
+
+  // Sparkline — right half
+  const sparkPad = 14;
+  const sparkX = apyCardDivX + sparkPad;
+  const sparkY = ry + sparkPad;
+  const sparkW = RP_RIGHT - apyCardDivX - sparkPad * 2;
+  const sparkH = APY_CARD_H - sparkPad * 2;
+
+  ctx.fillStyle = MUTED;
+  ctx.font = `9px ${font}`;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillText('90d APY', sparkX, sparkY - 2);
+
+  if (row.apyHistory && row.apyHistory.length > 1) {
+    drawSparkline(ctx, row.apyHistory, sparkX, sparkY + 10, sparkW, sparkH - 10, GREEN, isDark);
+  } else {
+    ctx.fillStyle = MUTED;
+    ctx.font = `11px ${font}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const rightCX = Math.round(apyCardDivX + (RP_RIGHT - apyCardDivX) / 2);
+    ctx.fillText(`30d: ${row.avg30 ? row.avg30.toFixed(2) + '%' : '-'}`, rightCX, ry + APY_CARD_H / 2 - 8);
+    ctx.fillText(`90d: ${row.avg90 ? row.avg90.toFixed(2) + '%' : '-'}`, rightCX, ry + APY_CARD_H / 2 + 8);
   }
 
-  ry += APY_SECTION_H + 20; // increased gap before avg line
-
-  // 30d/90d avg
-  const avg30Str = row.avg30 ? `${row.avg30.toFixed(2)}%` : '-';
-  const avg90Str = row.avg90 ? `${row.avg90.toFixed(2)}%` : '-';
-  ctx.fillStyle = MUTED;
-  ctx.font = `12px ${font}`;
-  ctx.textBaseline = 'alphabetic';
-  ctx.fillText(`30d avg: ${avg30Str}   ·   90d avg: ${avg90Str}`, APY_X, ry);
-  ry += 26;
+  ry += APY_CARD_H + 16;
 
   drawSep(ry);
   ry += 22;
@@ -365,49 +414,57 @@ export async function generatePromoImage(
     ...(row.underlyingSymbol ? [{ icon: 'layers', text: `Underlying: ${row.underlyingSymbol}` }] : []),
   ];
 
-  const CARD_PAD_X = 20;
   const CARD_PAD_Y = 20;
   const LINE_H = 28;
-  const TVL_COL_W = 148;
   const cardH = Math.max(CARD_PAD_Y * 2 + 74, CARD_PAD_Y * 2 + bullets.length * LINE_H + 4);
+  // Divider at the horizontal midpoint of the card
+  const cardDivX = Math.round(RP_X + RP_W / 2);
 
   roundRect(ctx, RP_X, ry, RP_W, cardH, 12);
   ctx.fillStyle = CARD_BG; ctx.fill();
   ctx.strokeStyle = BORDER; ctx.lineWidth = 1; ctx.stroke();
 
-  // TVL label + value — explicitly primary text color
+  // TVL label + value — centered in the left half
+  const tvlCenterX = Math.round(RP_X + RP_W / 4);
+  // Vertically center the two-line TVL block inside the card
+  const tvlBlockH = 62; // approx: label baseline (13) to value baseline (62) + descenders
+  const tvlTopY = ry + (cardH - tvlBlockH) / 2;
+
+  ctx.textAlign = 'center';
   ctx.fillStyle = TEXT;
   ctx.font = `bold 18px ${font}`;
   ctx.textBaseline = 'alphabetic';
-  ctx.fillText('TVL', RP_X + CARD_PAD_X, ry + CARD_PAD_Y + 13);
+  ctx.fillText('TVL', tvlCenterX, tvlTopY + 13);
 
   ctx.fillStyle = GREEN;
   ctx.font = `bold 50px ${font}`;
-  ctx.fillText(formatTvl(row.tvl), RP_X + CARD_PAD_X, ry + CARD_PAD_Y + 62);
+  ctx.fillText(formatTvl(row.tvl), tvlCenterX, tvlTopY + 62);
 
   // Card vertical divider
-  const cardDivX = RP_X + CARD_PAD_X + TVL_COL_W + CARD_PAD_X;
   ctx.strokeStyle = BORDER; ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(cardDivX, ry + 12); ctx.lineTo(cardDivX, ry + cardH - 12);
   ctx.stroke();
 
   // Bullet list — Lucide icons (no badge, green stroke only)
+  // Vertically center list items within the card
   const listX = cardDivX + 16;
-  let listY = ry + CARD_PAD_Y + LINE_H * 0.5 + 6;
+  const listContentH = bullets.length * LINE_H;
+  let listY = ry + (cardH - listContentH) / 2 + LINE_H / 2;
   const ICON_DRAW = 16;
-  ctx.textBaseline = 'middle';
 
   for (const bullet of bullets) {
     const iconKey = BULLET_ICON_KEY[bullet.icon] ?? 'repeat';
     const iconImg = lucideImgs[iconKey];
+    const iconTop = Math.round(listY - ICON_DRAW / 2);
     if (iconImg) {
-      ctx.drawImage(iconImg, listX, listY - ICON_DRAW / 2, ICON_DRAW, ICON_DRAW);
+      ctx.drawImage(iconImg, listX, iconTop, ICON_DRAW, ICON_DRAW);
     }
 
     ctx.fillStyle = MUTED;
     ctx.font = `13px ${font}`;
     ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
     ctx.fillText(bullet.text, listX + ICON_DRAW + 8, listY);
     listY += LINE_H;
   }
@@ -418,10 +475,16 @@ export async function generatePromoImage(
   const footerY = H - 16;
 
   ctx.fillStyle = MUTED;
-  ctx.font = `bold 14px ${font}`;
-  ctx.textAlign = 'right';
   ctx.textBaseline = 'alphabetic';
 
+  // Disclaimer — bottom left
+  ctx.font = `10px ${font}`;
+  ctx.textAlign = 'left';
+  ctx.fillText('APY variable. Past performance not indicative of future results.', LP_PAD, footerY);
+
+  // Globe + link — bottom right
+  ctx.font = `bold 14px ${font}`;
+  ctx.textAlign = 'right';
   const linkW = ctx.measureText(displayLink).width;
   if (lucideImgs.globe) {
     ctx.drawImage(
