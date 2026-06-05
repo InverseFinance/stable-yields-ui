@@ -338,7 +338,7 @@ export async function generatePromoImage(
   ry += 20;
   ctx.fillStyle = MUTED;
   ctx.font = `13px ${font}`;
-  ctx.fillText('on stableyields.info', RP_X, ry);
+  ctx.fillText('On stableyields.info', RP_X, ry);
   ry += 26;
 
   drawSep(ry);
@@ -355,7 +355,7 @@ export async function generatePromoImage(
     ...(row.underlyingSymbol ? [{ icon: 'layers', text: `Underlying: ${row.underlyingSymbol}` }] : []),
   ];
 
-  const ROW_H = 90;
+  const ROW_H = 104;
   const COMBO_CARD_H = ROW_H * 2 + 1;
   const combDivX = Math.round(RP_X + RP_W / 2);
   const valueCX = Math.round(RP_X + RP_W / 4);
@@ -375,13 +375,14 @@ export async function generatePromoImage(
   ctx.moveTo(RP_X + 12, ry + ROW_H); ctx.lineTo(RP_RIGHT - 12, ry + ROW_H);
   ctx.stroke();
 
-  // Sparkline layout constants (right cells)
+  // Sparkline layout: chart on the left, y-axis labels on the RIGHT side
   const SP_PAD_X = 14;
-  const SP_PAD_Y = 8;
-  const YLABEL_W = 32;
-  const LABEL_H = 14; // height reserved for "90d …" label
-  const chartLX = combDivX + SP_PAD_X + YLABEL_W;
-  const chartW = RP_RIGHT - SP_PAD_X - chartLX;
+  const SP_PAD_Y = 12;
+  const YLABEL_W = 34; // reserved width on the right for y-axis labels
+  const LABEL_H = 16;  // height reserved for "90d …" row label
+  const chartLX = combDivX + SP_PAD_X;
+  const chartW = RP_RIGHT - SP_PAD_X - YLABEL_W - chartLX;
+  const yLabelX = RP_RIGHT - SP_PAD_X; // y-axis labels right-aligned here
   const chartRowH = ROW_H - SP_PAD_Y * 2 - LABEL_H;
   const chartRowY = (rowIdx: number) => ry + rowIdx * ROW_H + SP_PAD_Y + LABEL_H;
 
@@ -400,12 +401,12 @@ export async function generatePromoImage(
   const apyPts = (row.chartHistory || []).map(p => ({ value: p.apy }));
   const apyVals = apyPts.map(p => p.value).filter(v => !isNaN(v) && v >= 0);
   if (apyVals.length >= 2) {
+    drawSparkline(ctx, apyPts, chartLX, chartRowY(0), chartW, chartRowH, GREEN, isDark);
     ctx.fillStyle = MUTED; ctx.font = `8px ${font}`; ctx.textAlign = 'right';
     ctx.textBaseline = 'top';
-    ctx.fillText(`${Math.max(...apyVals).toFixed(1)}%`, combDivX + SP_PAD_X + YLABEL_W - 2, chartRowY(0));
+    ctx.fillText(`${Math.max(...apyVals).toFixed(1)}%`, yLabelX, chartRowY(0));
     ctx.textBaseline = 'bottom';
-    ctx.fillText(`${Math.min(...apyVals).toFixed(1)}%`, combDivX + SP_PAD_X + YLABEL_W - 2, chartRowY(0) + chartRowH);
-    drawSparkline(ctx, apyPts, chartLX, chartRowY(0), chartW, chartRowH, GREEN, isDark);
+    ctx.fillText(`${Math.min(...apyVals).toFixed(1)}%`, yLabelX, chartRowY(0) + chartRowH);
   }
 
   // ── TVL row ───────────────────────────────────────────────────────────────
@@ -423,15 +424,17 @@ export async function generatePromoImage(
   const tvlPts = (row.chartHistory || []).map(p => ({ value: p.tvlUsd }));
   const tvlVals = tvlPts.map(p => p.value).filter(v => !isNaN(v) && v >= 0);
   if (tvlVals.length >= 2) {
+    drawSparkline(ctx, tvlPts, chartLX, chartRowY(1), chartW, chartRowH, GREEN, isDark);
     ctx.fillStyle = MUTED; ctx.font = `8px ${font}`; ctx.textAlign = 'right';
     ctx.textBaseline = 'top';
-    ctx.fillText(formatTvl(Math.max(...tvlVals)), combDivX + SP_PAD_X + YLABEL_W - 2, chartRowY(1));
+    ctx.fillText(formatTvl(Math.max(...tvlVals)), yLabelX, chartRowY(1));
     ctx.textBaseline = 'bottom';
-    ctx.fillText(formatTvl(Math.min(...tvlVals)), combDivX + SP_PAD_X + YLABEL_W - 2, chartRowY(1) + chartRowH);
-    drawSparkline(ctx, tvlPts, chartLX, chartRowY(1), chartW, chartRowH, GREEN, isDark);
+    ctx.fillText(formatTvl(Math.min(...tvlVals)), yLabelX, chartRowY(1) + chartRowH);
   }
 
   ry += COMBO_CARD_H + 16;
+  drawSep(ry);
+  ry += 20;
 
   // ── Bullet list (no card container) ──────────────────────────────────────
   const LINE_H = 28;

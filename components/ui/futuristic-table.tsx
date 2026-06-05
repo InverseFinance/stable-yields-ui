@@ -263,8 +263,8 @@ export default function FuturisticTable({
       projectImageUrl,
       link: opportunityLink,
       underlyingStable,
-      underlyingSymbol: assetEntry?.underlyingStable || '',
-      isVault: assetEntry?.mechanism?.toLowerCase().includes('erc-4626') ?? false,
+      underlyingSymbol: item.underlyingSymbol || assetEntry?.underlyingStable || '',
+      isVault: item.isVault,
       lockup: assetEntry?.lockup || '',
       chartHistory,
     }, rank, isDark);
