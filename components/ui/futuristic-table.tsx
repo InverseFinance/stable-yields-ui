@@ -212,10 +212,7 @@ export default function FuturisticTable({
   const handleScreenshot = async () => {
     const dataUrl = await captureTableDataUrl();
     if (!dataUrl) return;
-    const link = document.createElement('a');
-    link.download = 'stable-yields.png';
-    link.href = dataUrl;
-    link.click();
+    setPromoPreview({ dataUrl, filename: 'stable-yields.png' });
   };
 
   const handlePromoClick = async (item: any, rank: number) => {
