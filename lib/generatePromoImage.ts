@@ -347,7 +347,7 @@ export async function generatePromoImage(
   // ── Combined 2×2 card: APY row (top) + TVL row (bottom) ─────────────────
   const bullets: { icon: string; text: string }[] = [
     { icon: 'recycle', text: 'Auto-compounding' },
-    { icon: 'zap',     text: 'Zap-in with USDC or stablecoin' },
+    { icon: 'zap',     text: 'Zap-in with USDC or another stable' },
     ...(row.isVault ? [{ icon: 'vault',  text: 'ERC-4626 Tokenized Vault' }] : []),
     ...(row.lockup
       ? [{ icon: 'lock',   text: `Lockup: ${row.lockup}` }]
