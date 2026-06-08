@@ -98,6 +98,7 @@ export default function FuturisticTable({
   const [showCameraMenu, setShowCameraMenu] = useState(false);
   const [promoMode, setPromoMode] = useState(false);
   const [isButtonHidden, setIsButtonHidden] = useState(false);
+  const [promoPreview, setPromoPreview] = useState<{ dataUrl: string; filename: string } | null>(null);
 
   const sortedData = [...data].sort((a, b) => {
     const aValue = a[sortConfig.key] ?? 0;
@@ -269,15 +270,16 @@ export default function FuturisticTable({
       chartHistory,
     }, rank, isDark);
 
-    const a = document.createElement('a');
-    a.download = `stable-yields-${(item.symbol || 'promo').toLowerCase()}.png`;
-    a.href = promoDataUrl;
-    a.click();
+    setPromoPreview({
+      dataUrl: promoDataUrl,
+      filename: `stable-yields-${(item.symbol || 'promo').toLowerCase()}.png`,
+    });
   };
 
   useEffect(() => {
     const handleEscKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        if (promoPreview) { setPromoPreview(null); return; }
         if (showModal) handleDismiss();
         if (promoMode) setPromoMode(false);
         if (showCameraMenu) setShowCameraMenu(false);
@@ -285,7 +287,7 @@ export default function FuturisticTable({
     };
     window.addEventListener('keydown', handleEscKey);
     return () => window.removeEventListener('keydown', handleEscKey);
-  }, [showModal, promoMode, showCameraMenu]);
+  }, [showModal, promoMode, showCameraMenu, promoPreview]);
 
   return (
     <div className="w-full">
@@ -499,6 +501,35 @@ export default function FuturisticTable({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Promo image preview modal */}
+      {promoPreview && (
+        <div
+          className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={() => setPromoPreview(null)}
+        >
+          <div
+            className="bg-container rounded-xl shadow-2xl overflow-hidden max-w-4xl w-full"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={promoPreview.dataUrl} alt="Promo preview" className="w-full" />
+            <div className="flex gap-3 justify-end p-3 border-t border-border">
+              <button
+                onClick={() => setPromoPreview(null)}
+                className="cursor-pointer px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition"
+              >
+                Close
+              </button>
+              <a href={promoPreview.dataUrl} download={promoPreview.filename}>
+                <button className="cta-button cursor-pointer px-4 py-2 text-sm text-foreground">
+                  Download
+                </button>
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Off-screen screenshot template — rendered only during capture */}
       {screenshotData && (
