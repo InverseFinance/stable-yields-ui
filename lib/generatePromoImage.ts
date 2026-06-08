@@ -23,7 +23,7 @@ const LUCIDE_PATHS = {
   archive: `<rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/>`,
   lock:    `<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>`,
   check2:  `<path d="M18 6 7 17l-5-5"/><path d="m22 10-7.5 7.5L13 16"/>`,
-  layers:  `<path d="M2 20h20"/><path d="M2 15h20"/><path d="M2 10h20"/>`,
+  layers:  `<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>`,
   globe:   `<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>`,
 };
 
@@ -464,7 +464,7 @@ export async function generatePromoImage(
   // Disclaimer — bottom left
   ctx.font = `10px ${font}`;
   ctx.textAlign = 'left';
-  ctx.fillText('APY variable. Past performance not indicative of future results.', LP_PAD, footerY);
+  ctx.fillText('APY variable. Past performance not indicative of future results.', LP_PAD, footerY + 5);
 
   // Globe + link — bottom right
   ctx.font = `bold 14px ${font}`;
