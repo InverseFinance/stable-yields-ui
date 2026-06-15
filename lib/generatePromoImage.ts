@@ -328,18 +328,20 @@ export async function generatePromoImage(
   ctx.fillText(row.symbol, RP_X + HEADER_LOGO_R * 2 + 14, symbolBaseline);
   ry += 72;
 
-  // RANKS #N (green)
-  ctx.fillStyle = GREEN;
-  ctx.font = `bold 44px ${font}`;
-  ctx.fillText(`RANKS  #${rank}`, RP_X, ry + 44);
-  ry += 56;
+  if (rank <= 3) {
+    // RANKS #N (green)
+    ctx.fillStyle = GREEN;
+    ctx.font = `bold 44px ${font}`;
+    ctx.fillText(`RANKS  #${rank}`, RP_X, ry + 44);
+    ry += 56;
 
-  // Extra gap before "on STABLE YIELDS"
-  ry += 20;
-  ctx.fillStyle = MUTED;
-  ctx.font = `13px ${font}`;
-  ctx.fillText('On stableyields.info', RP_X, ry);
-  ry += 26;
+    // Extra gap before "on stableyields.info"
+    ry += 20;
+    ctx.fillStyle = MUTED;
+    ctx.font = `13px ${font}`;
+    ctx.fillText('On stableyields.info', RP_X, ry);
+    ry += 26;
+  }
 
   drawSep(ry);
   ry += 28;
