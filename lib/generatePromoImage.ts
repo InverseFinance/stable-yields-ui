@@ -341,9 +341,10 @@ export async function generatePromoImage(
     ctx.font = `13px ${font}`;
     ctx.fillText('On stableyields.info', RP_X, ry);
     ry += 26;
+
+    drawSep(ry);
   }
 
-  drawSep(ry);
   ry += 28;
 
   // ── Combined 2×2 card: APY row (top) + TVL row (bottom) ─────────────────
