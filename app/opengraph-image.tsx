@@ -8,15 +8,15 @@ export const size = {
 export const contentType = 'image/png'
 
 const PROJECT_IMAGES: Record<string, string> = {
-  'Frax': 'https://icons.llamao.fi/icons/protocols/frax?w=48&h=48',
-  'Curve': 'https://icons.llamao.fi/icons/protocols/curve?w=48&h=48',
-  'Aave-V3': 'https://icons.llamao.fi/icons/protocols/aave-v3?w=48&h=48',
-  'Silo': 'https://icons.llamao.fi/icons/protocols/silo?w=48&h=48',
-  'Compound': 'https://icons.llamao.fi/icons/protocols/compound?w=48&h=48',
-  'FiRM': 'https://icons.llamao.fi/icons/protocols/inverse-finance?w=48&h=48',
-  'Inverse': 'https://icons.llamao.fi/icons/protocols/inverse-finance?w=48&h=48',
-  'Spark': 'https://icons.llamao.fi/icons/protocols/spark?w=48&h=48',
-  'Fluid': 'https://icons.llamao.fi/icons/protocols/fluid?w=48&h=48',
+  'Frax': 'https://icons.llamao.fi/icons/protocols/frax?w=48&h=48&format=png',
+  'Curve': 'https://icons.llamao.fi/icons/protocols/curve?w=48&h=48&format=png',
+  'Aave-V3': 'https://icons.llamao.fi/icons/protocols/aave-v3?w=48&h=48&format=png',
+  'Silo': 'https://icons.llamao.fi/icons/protocols/silo?w=48&h=48&format=png',
+  'Compound': 'https://icons.llamao.fi/icons/protocols/compound?w=48&h=48&format=png',
+  'FiRM': 'https://icons.llamao.fi/icons/protocols/inverse-finance?w=48&h=48&format=png',
+  'Inverse': 'https://icons.llamao.fi/icons/protocols/inverse-finance?w=48&h=48&format=png',
+  'Spark': 'https://icons.llamao.fi/icons/protocols/spark?w=48&h=48&format=png',
+  'Fluid': 'https://icons.llamao.fi/icons/protocols/fluid?w=48&h=48&format=png',
   'Sky': 'https://coin-images.coingecko.com/coins/images/39925/large/sky.jpg?1724827980',
 };
 
@@ -69,7 +69,7 @@ export default async function Image() {
     rows = json.rates
       .filter((r: any) => !['sDAI'].includes(r.symbol) && !!r.pool)
       .sort((a: any, b: any) => b.apy - a.apy)
-      .slice(0, 5)
+      .slice(0, 10)
       .map((r: any) => ({
         symbol: r.symbol.replace('fxSave', 'fxSAVE'),
         project: r.project.replace('FiRM', 'Inverse').replace(/fx-protocol/ig, 'f(x) Protocol'),
@@ -92,7 +92,7 @@ export default async function Image() {
       >
         {/* Header */}
         <div tw="flex flex-col items-center pt-9 pb-7">
-          <div tw="text-5xl font-bold" style={{ color: TEXT }}>
+          <div tw="text-5xl font-extrabold" style={{ color: TEXT }}>
             Stable Yields
           </div>
           <div tw="text-xl mt-1" style={{ color: MUTED }}>
@@ -116,7 +116,7 @@ export default async function Image() {
                 tw={`flex items-center text-lg ${col.key === 'symbol' || col.key === 'project' ? 'w-[220px]' : 'w-[150px]'}`}
                 style={{ color: MUTED, fontWeight: 500 }}
               >
-                {col.label}{col.key === 'apy' ? ' ▼' : ''}
+                {col.label}
               </div>
             ))}
           </div>
@@ -139,7 +139,7 @@ export default async function Image() {
                     style={{ objectFit: 'cover' }}
                   />
                 )}
-                <span tw="text-lg font-bold" style={{ color: TEXT }}>{row.symbol}</span>
+                <span tw="text-lg font-extrabold" style={{ color: TEXT }}>{row.symbol}</span>
               </div>
 
               {/* Project */}
