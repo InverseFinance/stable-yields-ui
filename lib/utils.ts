@@ -76,12 +76,12 @@ export const smartShortNumber = (value: number, precision = 2, isDollar = false,
 
 export function formatUsd(value: number, precision = 2): string {
   if (value >= 1_000_000) {
-    return `$${(value / 1_000_000).toFixed(precision)}M`;
+    return `$${addCommas((value / 1_000_000).toFixed(precision))}M`;
   }
   if (value >= 1_000) {
-    return `$${(value / 1_000).toFixed(precision)}K`;
+    return `$${addCommas((value / 1_000).toFixed(precision))}K`;
   }
-  return `$${value.toFixed(precision)}`;
+  return `$${addCommas(value.toFixed(precision))}`;
 }
 
 export function formatApy(value: number): string {
@@ -101,4 +101,9 @@ export function formatTokenAmount(weiValue: string, decimals: number, maxDecimal
 
 function addCommas(n: string): string {
   return n.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+export const commify = (n: number, precision = 2): string => {
+  if((typeof n === 'number' && isNaN(n)) || typeof n !== 'number') return '';
+  return addCommas(n.toFixed(precision));
 }

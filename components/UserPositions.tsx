@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { fetchEnsoBalances } from '@/lib/enso';
 import { type TokenPrices } from '@/lib/fetchTokenPrices';
 import { type StakingData } from '@/app/types';
-import { formatUsd } from '@/lib/utils';
+import { commify, formatUsd } from '@/lib/utils';
 import { ManagePositionModal } from './ManagePositionModal';
 
 export interface VaultPosition {
@@ -112,7 +112,7 @@ export function UserPositions({
                       </span>
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      {pos.balance < 1 ? '<1' : pos.balance.toFixed(2)} tokens
+                      {pos.balance < 1 ? '<1' : commify(pos.balance)} tokens
                     </div>
                     {/* Mobile-only USD row */}
                     <div className="text-xs text-muted-foreground sm:hidden mt-0.5">
