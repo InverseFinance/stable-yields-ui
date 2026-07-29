@@ -1,0 +1,183 @@
+import { ImageResponse } from 'next/og'
+
+export const alt = 'Stable Yields - Best Stablecoin Yields in DeFi'
+export const size = {
+  width: 1200,
+  height: 630,
+}
+export const contentType = 'image/png'
+
+const PROJECT_IMAGES: Record<string, string> = {
+  'Frax': 'https://icons.llamao.fi/icons/protocols/frax?w=48&h=48',
+  'Curve': 'https://icons.llamao.fi/icons/protocols/curve?w=48&h=48',
+  'Aave-V3': 'https://icons.llamao.fi/icons/protocols/aave-v3?w=48&h=48',
+  'Silo': 'https://icons.llamao.fi/icons/protocols/silo?w=48&h=48',
+  'Compound': 'https://icons.llamao.fi/icons/protocols/compound?w=48&h=48',
+  'FiRM': 'https://icons.llamao.fi/icons/protocols/inverse-finance?w=48&h=48',
+  'Inverse': 'https://icons.llamao.fi/icons/protocols/inverse-finance?w=48&h=48',
+  'Spark': 'https://icons.llamao.fi/icons/protocols/spark?w=48&h=48',
+  'Fluid': 'https://icons.llamao.fi/icons/protocols/fluid?w=48&h=48',
+  'Sky': 'https://coin-images.coingecko.com/coins/images/39925/large/sky.jpg?1724827980',
+};
+
+function getProjectImageSrc(project: string): string {
+  return PROJECT_IMAGES[project]
+    || `https://icons.llamao.fi/icons/protocols/${project.toLowerCase().replace(/ /g, '-')}?w=48&h=48`;
+}
+
+function shortNumber(value: number): string {
+  const abs = Math.abs(value);
+  if (abs >= 1_000_000_000) return `$${(value / 1_000_000_000).toFixed(1)}B`;
+  if (abs >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
+  if (abs >= 1_000) return `$${(value / 1_000).toFixed(1)}k`;
+  return `$${value.toFixed(1)}`;
+}
+
+const COLUMNS = [
+  { key: 'symbol', label: 'Stablecoin' },
+  { key: 'project', label: 'Project' },
+  { key: 'apy', label: 'APY' },
+  { key: 'avg30', label: '30d Avg.' },
+  { key: 'avg90', label: '90d Avg.' },
+  { key: 'tvl', label: 'TVL' },
+];
+
+// Dark theme colors (can't use CSS vars in Satori)
+const BG = 'rgb(19, 19, 20)';
+const CARD_BG = 'rgb(25, 25, 27)';
+const TEXT = '#EEEEEE';
+const MUTED = '#8b8fa3';
+const BORDER = 'rgba(255, 255, 255, 0.1)';
+
+interface Row {
+  symbol: string;
+  project: string;
+  projectLabel: string;
+  apy: number;
+  avg30: number;
+  avg90: number;
+  tvl: number;
+  image: string;
+}
+
+export default async function Image() {
+  let rows: Row[] = [];
+
+  try {
+    const res = await fetch('https://www.inverse.finance/api/dola/sdola-comparator?v=2');
+    const json = await res.json();
+    rows = json.rates
+      .filter((r: any) => !['sDAI'].includes(r.symbol) && !!r.pool)
+      .sort((a: any, b: any) => b.apy - a.apy)
+      .slice(0, 5)
+      .map((r: any) => ({
+        symbol: r.symbol.replace('fxSave', 'fxSAVE'),
+        project: r.project.replace('FiRM', 'Inverse').replace(/fx-protocol/ig, 'f(x) Protocol'),
+        projectLabel: r.project.replace('FiRM', 'Inverse').replace(/fx-protocol/ig, 'f(x) Protocol'),
+        apy: r.apy ?? 0,
+        avg30: r.avg30 ?? 0,
+        avg90: r.avg90 ?? 0,
+        tvl: r.tvl ?? 0,
+        image: r.image ?? '',
+      }));
+  } catch {
+    // fallback to empty
+  }
+
+  return new ImageResponse(
+    (
+      <div
+        tw="flex flex-col w-full h-full px-6"
+        style={{ backgroundColor: BG, fontFamily: 'sans-serif' }}
+      >
+        {/* Header */}
+        <div tw="flex flex-col items-center pt-9 pb-7">
+          <div tw="text-5xl font-bold" style={{ color: TEXT }}>
+            Stable Yields
+          </div>
+          <div tw="text-xl mt-1" style={{ color: MUTED }}>
+            Earn and compare the best stablecoin yields across major DeFi protocols
+          </div>
+        </div>
+
+        {/* Table card */}
+        <div
+          tw="flex flex-col flex-1 rounded-2xl px-4 py-2"
+          style={{ backgroundColor: CARD_BG, border: `1px solid ${BORDER}` }}
+        >
+          {/* Table header */}
+          <div
+            tw="flex py-3"
+            style={{ borderBottom: `1px solid ${BORDER}` }}
+          >
+            {COLUMNS.map((col) => (
+              <div
+                key={col.key}
+                tw={`flex items-center text-lg ${col.key === 'symbol' || col.key === 'project' ? 'w-[220px]' : 'w-[150px]'}`}
+                style={{ color: MUTED, fontWeight: 500 }}
+              >
+                {col.label}{col.key === 'apy' ? ' ▼' : ''}
+              </div>
+            ))}
+          </div>
+
+          {/* Table rows */}
+          {rows.map((row, i) => (
+            <div
+              key={`${row.symbol}-${row.project}`}
+              tw="flex items-center py-3"
+              style={{ borderBottom: i < rows.length - 1 ? `1px solid ${BORDER}` : 'none' }}
+            >
+              {/* Stablecoin */}
+              <div tw="flex items-center w-[220px]">
+                {row.image && (
+                  <img
+                    src={row.image}
+                    width={28}
+                    height={28}
+                    tw="rounded-full mr-2.5"
+                    style={{ objectFit: 'cover' }}
+                  />
+                )}
+                <span tw="text-lg font-bold" style={{ color: TEXT }}>{row.symbol}</span>
+              </div>
+
+              {/* Project */}
+              <div tw="flex items-center w-[220px]">
+                <img
+                  src={getProjectImageSrc(row.project)}
+                  width={28}
+                  height={28}
+                  tw="rounded-full mr-2.5"
+                  style={{ objectFit: 'cover' }}
+                />
+                <span tw="text-lg font-bold" style={{ color: TEXT }}>{row.projectLabel}</span>
+              </div>
+
+              {/* APY */}
+              <div tw="flex items-center w-[150px] text-lg font-bold" style={{ color: TEXT }}>
+                {row.apy ? `${row.apy.toFixed(2)}%` : '-'}
+              </div>
+
+              {/* 30d Avg */}
+              <div tw="flex items-center w-[150px] text-lg font-bold" style={{ color: TEXT }}>
+                {row.avg30 ? `${row.avg30.toFixed(2)}%` : '-'}
+              </div>
+
+              {/* 90d Avg */}
+              <div tw="flex items-center w-[150px] text-lg font-bold" style={{ color: TEXT }}>
+                {row.avg90 ? `${row.avg90.toFixed(2)}%` : '-'}
+              </div>
+
+              {/* TVL */}
+              <div tw="flex items-center w-[150px] text-lg font-bold" style={{ color: TEXT }}>
+                {row.tvl ? shortNumber(row.tvl) : '-'}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    ),
+    { ...size }
+  )
+}
