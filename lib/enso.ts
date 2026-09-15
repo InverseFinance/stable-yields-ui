@@ -70,6 +70,14 @@ export async function fetchEnsoApproval(params: {
   }));
 }
 
+export async function fetchEnsoPrices(addresses: `0x${string}`[]) {
+  const enso = getClient();
+  return withRetry(() => enso.getMultiplePriceData({
+    chainId: 1,
+    addresses,
+  }));
+}
+
 export async function fetchEnsoBalances(address: `0x${string}`) {
   const enso = getClient();
   return withRetry(() => enso.getBalances({

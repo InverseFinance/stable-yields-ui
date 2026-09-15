@@ -137,7 +137,7 @@ export const SelectedOpportunity = ({
         <div className="flex justify-between text-sm">
             <div className="flex flex-col gap-0.5">
                 {
-                    !token.isVault && !isNotOppy && <p className="text-warning text-xs font-bold">Note:</p>
+                    !token.isVault && !token.isLp && !isNotOppy && <p className="text-warning text-xs font-bold">Note:</p>
                 }
                 {
                     token.isVault && <span className="text-text-muted text-xs">{t.estApyAfterDeposit}</span>
@@ -149,7 +149,7 @@ export const SelectedOpportunity = ({
             </div>
             <div className="flex flex-col items-end gap-0.5">
                 {
-                    !token.isVault && !isNotOppy && <p className="text-warning text-xs">Not a vault, your deposits will be lent out on Aave</p>
+                    !token.isVault && !token.isLp && !isNotOppy && <p className="text-warning text-xs">Not a vault, your deposits will be lent out on Aave</p>
                 }
                 {
                     token.isVault && <span className="font-mono text-accent font-semibold text-xs gradient-text">{formatApy(estimatedNewApy)}</span>

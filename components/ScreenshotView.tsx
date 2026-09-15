@@ -5,6 +5,7 @@ import { smartShortNumber } from '@/lib/utils';
 export const PROJECT_IMAGES: Record<string, string> = {
   'Frax': 'https://icons.llamao.fi/icons/protocols/frax?w=48&h=48',
   'Curve': 'https://icons.llamao.fi/icons/protocols/curve?w=48&h=48',
+  'Convex': 'https://icons.llamao.fi/icons/protocols/convex-finance?w=48&h=48',
   'Aave-V3': 'https://icons.llamao.fi/icons/protocols/aave-v3?w=48&h=48',
   'Silo': 'https://icons.llamao.fi/icons/protocols/silo?w=48&h=48',
   'Compound': 'https://icons.llamao.fi/icons/protocols/compound?w=48&h=48',

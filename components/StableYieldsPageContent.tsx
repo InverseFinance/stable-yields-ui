@@ -1,6 +1,8 @@
 import { YieldTable } from "@/components/yield-table";
 import { StakingData } from "@/app/types";
 import { fetchTokenPrices } from "@/lib/fetchTokenPrices";
+import { fetchCurveLps } from "@/lib/curve-lps";
+import { fetchConvexLps } from "@/lib/convex-lps";
 
 export async function StableYieldsPageContent({ title, titleSize = 'text-5xl sm:text-8xl lg:text-8xl' }: { title: string, titleSize?: string }) {
   const [stablesRes, usTreasuryRes, tokenPricesRes] = await Promise.allSettled([
@@ -14,12 +16,16 @@ export async function StableYieldsPageContent({ title, titleSize = 'text-5xl sm:
   const usTreasuryData = usTreasuryRes.status === 'fulfilled' ? await usTreasuryRes.value.json() : { data: [] };
   const usTreasuryYield = usTreasuryData?.data?.length > 0 ? usTreasuryData.data[usTreasuryData.data.length - 1]?.BC_1MONTH : 0;
   const rates = json.rates.filter((r: StakingData) => !['sDAI'].includes(r.symbol));
-  const chartResults = await Promise.allSettled(rates.map(async (r: StakingData) => {
-    if (!r.pool) return [];
-    const data = await fetch(`https://yields.llama.fi/chart/${r.pool}`);
-    const chartResult = await data.json();
-    return chartResult.status === 'success' ? chartResult.data : [];
-  }));
+  const [chartResults, curveLps, convexLps] = await Promise.all([
+    Promise.allSettled(rates.map(async (r: StakingData) => {
+      if (!r.pool) return [];
+      const data = await fetch(`https://yields.llama.fi/chart/${r.pool}`);
+      const chartResult = await data.json();
+      return chartResult.status === 'success' ? chartResult.data : [];
+    })),
+    fetchCurveLps(rates),
+    fetchConvexLps(rates),
+  ]);
 
   const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
   const topFiveApySymbols = rates.sort((a, b) => b.apy - a.apy).filter(r => !!r.pool).slice(0, 5).map((r) => r.symbol);
@@ -59,6 +65,7 @@ export async function StableYieldsPageContent({ title, titleSize = 'text-5xl sm:
           tokenPrices={tokenPrices}
           usTreasuryYield={usTreasuryYield}
           chartData={chartData}
+          lps={[...curveLps, ...convexLps]}
           data={rates.map((r: StakingData, index: number) => ({
             ...r,
             project: r.project.replace('FiRM', 'Inverse').replace(/fx-protocol/, '(fx) Protocol'),
