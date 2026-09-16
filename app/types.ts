@@ -30,23 +30,29 @@ export interface LpCoin {
     image: string;
 }
 
+export interface LpZap {
+    // token received when zapping in with Enso
+    tokenAddress: `0x${string}`;
+    decimals: number;
+    symbol: string;
+    // APR earned by holding the received token
+    apr: number;
+    // needed by the zap card to compare output worth with deposit worth
+    price?: number;
+}
+
 export interface LpData {
     // LP token address
     address: `0x${string}`;
-    decimals: number;
     name: string;
     symbol: string;
     project: string;
     coins: LpCoin[];
     tvl: number;
-    baseApr: number;
-    // gauge rewards and incentives, only earned when staking the LP token
-    rewardsApr: number;
     totalApr: number;
-    lpPrice?: number;
     link: string;
-    // zappable with Enso, otherwise only the project link is offered
-    isZappable: boolean;
+    // only for projects supporting the Enso zap-in
+    zap?: LpZap;
 }
 
 export interface ChartData {

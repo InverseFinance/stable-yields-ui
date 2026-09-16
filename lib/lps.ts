@@ -1,4 +1,5 @@
 import { LpCoin, StakingData } from '@/app/types';
+import { fetchEnsoPrices } from '@/lib/enso';
 
 export const MIN_POOL_TVL_USD = 1_000_000;
 export const REQUEST_TIMEOUT_MS = 10_000;
@@ -39,4 +40,20 @@ export function withTimeout<T>(promise: Promise<T>, ms = REQUEST_TIMEOUT_MS): Pr
     timer = setTimeout(() => reject(new Error(`Timed out after ${ms}ms`)), ms);
   });
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+// Enso USD prices keyed by lowercase token address, empty when unavailable
+export async function fetchEnsoPriceMap(addresses: `0x${string}`[]): Promise<Record<string, number>> {
+  if (!addresses.length) return {};
+  try {
+    // the Enso SDK has no request timeout, don't let it hang the page render
+    const prices = await withTimeout(fetchEnsoPrices(addresses));
+    // unknown tokens come back as null entries
+    return Object.fromEntries(
+      prices.filter(p => !!p?.price).map(p => [p.address.toLowerCase(), Number(p.price)]),
+    );
+  } catch (err) {
+    console.error('Failed to fetch Enso prices:', err);
+    return {};
+  }
 }

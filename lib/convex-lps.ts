@@ -169,21 +169,15 @@ export async function fetchConvexLps(rates: StakingData[]): Promise<LpData[]> {
 
     return matchingPools.map((p, i) => {
       const coins = toLpCoins(p.coins, mainListCoins);
-      const baseApr = p.baseApy || 0;
       return {
         address: p.lpTokenAddress as `0x${string}`,
-        // Curve LP tokens have 18 decimals
-        decimals: 18,
         name: p.name,
         symbol: coins.map(c => c.symbol).join('/'),
         project: 'Convex',
         coins,
         tvl: p.convexPoolData.usdTotal,
-        baseApr,
-        rewardsApr: rewardAprs[i],
-        totalApr: baseApr + rewardAprs[i],
+        totalApr: (p.baseApy || 0) + rewardAprs[i],
         link: getConvexPoolUrl(p.convexPoolData.id),
-        isZappable: false,
       };
     });
   } catch (err) {

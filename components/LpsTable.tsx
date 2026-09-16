@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { ExternalLink } from 'lucide-react';
-import { LpCoin, LpData, StakingData } from '@/app/types';
+import { LpCoin, LpData, LpZap, StakingData } from '@/app/types';
 import { TokenPrices } from '@/lib/fetchTokenPrices';
 import { gaEvent } from '@/lib/analytics';
 import { smartShortNumber } from '@/lib/utils';
@@ -24,16 +24,15 @@ const CELL_CLASS = 'min-w-[125px] p-2 sm:p-3 text-primary-foreground text-sm sm:
 
 const formatApr = (apr: number) => apr ? `${apr.toFixed(2)}%` : '-';
 
-// without an LP price the zap card can't compare output worth with deposit worth
-const canZap = (lp: LpData) => lp.isZappable && !!lp.lpPrice;
+// without a price for the received token the zap card can't compare output worth with deposit worth
+const canZap = (lp: LpData) => !!lp.zap?.price;
 
-// Shape expected by the Enso zap card, with the LP token as the zap output
-const toStakingData = (lp: LpData): StakingData => ({
+// Shape expected by the Enso zap card, with the zap token as output
+const toStakingData = (lp: LpData, zap: LpZap): StakingData => ({
   symbol: lp.symbol,
-  zapSymbol: `${lp.symbol} LP`,
+  zapSymbol: zap.symbol,
   project: lp.project,
-  // holding the LP token only earns the base APR, rewards require staking it
-  apy: lp.baseApr,
+  apy: zap.apr,
   avg30: 0,
   avg60: 0,
   avg90: 0,
@@ -41,13 +40,13 @@ const toStakingData = (lp: LpData): StakingData => ({
   link: lp.link,
   image: getProjectImageSrc(lp.project),
   isLp: true,
-  address: lp.address,
-  vaultPrice: lp.lpPrice || 0,
+  address: zap.tokenAddress,
+  vaultPrice: zap.price || 0,
   totalAssets: lp.tvl,
   totalAssets30d: 0,
   totalAssets90d: 0,
-  decimals: lp.decimals,
-  zapDecimals: lp.decimals,
+  decimals: zap.decimals,
+  zapDecimals: zap.decimals,
 });
 
 function CoinIcon({ coin }: { coin: LpCoin }) {
@@ -145,12 +144,13 @@ export function LpsTable({ lps, tokenPrices }: { lps: LpData[]; tokenPrices: Tok
   const isZapAvailable = !!selectedLp && canZap(selectedLp);
 
   const getZapUnavailableMessage = (lp: LpData) => {
-    if (lp.isZappable) {
-      return `Zapping into ${lp.symbol} isn't available right now, you can still add liquidity on ${lp.project}.`;
+    if (lp.zap) {
+      return `Zapping into ${lp.symbol} isn't available right now, you can still deposit on ${lp.project}.`;
     }
-    const zappableSamePool = lps.find(other => canZap(other) && other.address.toLowerCase() === lp.address.toLowerCase());
+    // a row whose zap gives this pool's LP token, which can then be deposited on the project
+    const lpTokenZapRow = lps.find(other => canZap(other) && other.zap?.tokenAddress.toLowerCase() === lp.address.toLowerCase());
     return `Zapping isn't available for ${lp.project} pools, deposit on ${lp.project} to earn this APR.`
-      + (zappableSamePool ? ` You can first zap into the LP token from the ${zappableSamePool.symbol} ${zappableSamePool.project} row, then stake it on ${lp.project}.` : '');
+      + (lpTokenZapRow ? ` You can first zap into the LP token from the ${lpTokenZapRow.symbol} ${lpTokenZapRow.project} row, then stake it on ${lp.project}.` : '');
   };
 
   return (
@@ -225,7 +225,7 @@ export function LpsTable({ lps, tokenPrices }: { lps: LpData[]; tokenPrices: Tok
           </table>
         </div>
         <p className="text-muted-foreground text-xs sm:text-sm mt-2">
-          Curve pools with over $1M TVL that include at least one stablecoin from the Stables list
+          Pools that include at least one stablecoin from the Stables list
         </p>
       </motion.div>
 
@@ -240,17 +240,18 @@ export function LpsTable({ lps, tokenPrices }: { lps: LpData[]; tokenPrices: Tok
           className="bg-container p-4 sm:p-6 rounded-t-2xl sm:rounded-xl shadow-xl w-full sm:w-xl sm:max-w-lg max-h-[90vh] overflow-y-auto"
           onClick={e => e.stopPropagation()}
         >
-          {zapLp && (
+          {zapLp?.zap && (
             <div hidden={!isZapAvailable}>
               <StakingCard
-                stakingData={toStakingData(zapLp)}
+                stakingData={toStakingData(zapLp, zapLp.zap)}
                 tokenPrices={tokenPrices}
                 onSuccess={closeModal}
               />
-              {zapLp.rewardsApr > 0 && (
+              {/* the received token doesn't earn the rewards by itself */}
+              {zapLp.totalApr > zapLp.zap.apr && (
                 <p className="text-muted-foreground text-xs sm:text-sm pt-3">
-                  Zapping in gets you the LP token, which earns the {formatApr(zapLp.baseApr)} base APR.
-                  To also earn the {formatApr(zapLp.rewardsApr)} rewards APR, stake your LP tokens in the pool&apos;s gauge on {zapLp.project}.
+                  Zapping in gets you the LP token, which earns the {formatApr(zapLp.zap.apr)} base APR.
+                  To also earn the {formatApr(zapLp.totalApr - zapLp.zap.apr)} rewards APR, stake your LP tokens in the pool&apos;s gauge on {zapLp.project}.
                 </p>
               )}
             </div>

@@ -78,6 +78,16 @@ export async function fetchEnsoPrices(addresses: `0x${string}`[]) {
   }));
 }
 
+export async function fetchEnsoTokensData(addresses: `0x${string}`[]) {
+  const enso = getClient();
+  return withRetry(() => enso.getTokenData({
+    chainId: 1,
+    address: addresses,
+    includeMetadata: true,
+    includeUnderlying: true,
+  }));
+}
+
 export async function fetchEnsoBalances(address: `0x${string}`) {
   const enso = getClient();
   return withRetry(() => enso.getBalances({
