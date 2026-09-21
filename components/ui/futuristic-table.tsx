@@ -5,28 +5,13 @@ import { useState, useEffect, useRef } from "react";
 import { flushSync } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
-import { Camera } from "lucide-react";
 import { gaEvent, smartShortNumber } from "@/lib/utils";
 import { TokenPrices } from "@/lib/fetchTokenPrices";
 import { StakingCard } from '../StakingCard'
 import { ScreenshotView, ScreenshotRowData, getProjectImageSrc } from '../ScreenshotView';
+import { HighlightModeHint, ImagePreviewModal, ScreenshotMenu } from '../ScreenshotMenu';
 import { ASSET_CONTENT } from '@/lib/asset-content';
-
-async function fetchAsDataUrl(src: string): Promise<string> {
-  try {
-    const res = await fetch(`/_next/image?url=${encodeURIComponent(src)}&w=64&q=75`);
-    if (!res.ok) return '';
-    const blob = await res.blob();
-    return await new Promise<string>(resolve => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve((reader.result as string) || '');
-      reader.onerror = () => resolve('');
-      reader.readAsDataURL(blob);
-    });
-  } catch {
-    return '';
-  }
-}
+import { captureAsPng, fetchAsDataUrl, fetchDataUrlMap } from '@/lib/screenshot';
 
 const projectImages = {
   'Frax': 'https://icons.llamao.fi/icons/protocols/frax?w=48&h=48',
@@ -95,9 +80,7 @@ export default function FuturisticTable({
   } | null>(null);
   const [screenshotKey, setScreenshotKey] = useState(0);
   const screenshotRef = useRef<HTMLDivElement>(null);
-  const [showCameraMenu, setShowCameraMenu] = useState(false);
   const [promoMode, setPromoMode] = useState(false);
-  const [isButtonHidden, setIsButtonHidden] = useState(false);
   const [promoPreview, setPromoPreview] = useState<{ dataUrl: string; filename: string } | null>(null);
 
   const sortedData = [...data].sort((a, b) => {
@@ -170,17 +153,7 @@ export default function FuturisticTable({
 
     const rows = displayItems.map(toRow);
 
-    const rawSrcs = new Set<string>();
-    for (const row of rows) {
-      if (row.image) rawSrcs.add(row.image);
-      rawSrcs.add(getProjectImageSrc(row.project));
-    }
-    const imageEntries = await Promise.all(
-      Array.from(rawSrcs).map(async src => [src, await fetchAsDataUrl(src)] as const)
-    );
-    const imageMap: Record<string, string> = Object.fromEntries(
-      imageEntries.filter(([, v]) => v)
-    );
+    const imageMap = await fetchDataUrlMap(rows.flatMap(row => [row.image, getProjectImageSrc(row.project)]));
 
     flushSync(() => {
       setScreenshotKey(k => k + 1);
@@ -197,13 +170,7 @@ export default function FuturisticTable({
     if (!screenshotRef.current) return null;
 
     try {
-      const { toPng } = await import('html-to-image');
-      const isDark = document.documentElement.classList.contains('dark');
-      return await toPng(screenshotRef.current, {
-        pixelRatio: 2,
-        backgroundColor: isDark ? 'rgb(19,19,20)' : '#ffffff',
-        style: { position: 'static', top: 'auto', left: 'auto', overflow: 'hidden' },
-      });
+      return await captureAsPng(screenshotRef.current);
     } finally {
       setScreenshotData(null);
     }
@@ -279,25 +246,16 @@ export default function FuturisticTable({
         if (promoPreview) { setPromoPreview(null); return; }
         if (showModal) handleDismiss();
         if (promoMode) setPromoMode(false);
-        if (showCameraMenu) setShowCameraMenu(false);
       }
     };
     window.addEventListener('keydown', handleEscKey);
     return () => window.removeEventListener('keydown', handleEscKey);
-  }, [showModal, promoMode, showCameraMenu, promoPreview]);
+  }, [showModal, promoMode, promoPreview]);
 
   return (
     <div className="w-full">
       {promoMode && (
-        <div className="flex items-center justify-between mb-2 px-1">
-          <p className="text-sm text-muted-foreground">Click on a yield opportunity to generate an image for it</p>
-          <button
-            onClick={() => setPromoMode(false)}
-            className="text-xs text-muted-foreground hover:text-foreground transition cursor-pointer ml-4 shrink-0"
-          >
-            Cancel
-          </button>
-        </div>
+        <HighlightModeHint text="Click on a yield opportunity to generate an image for it" onCancel={() => setPromoMode(false)} />
       )}
       <motion.div
         className="bg-container backdrop-blur-lg rounded-2xl p-2 sm:p-4 shadow-xl"
@@ -306,43 +264,7 @@ export default function FuturisticTable({
         transition={{ duration: 0.5 }}
       >
         <div className="relative">
-          {/* Camera dropdown */}
-          <div className="absolute -top-3 -right-2 z-20">
-            <button
-              onClick={() => isButtonHidden ? setIsButtonHidden(false) : setShowCameraMenu(v => !v)}
-              style={{ opacity: isButtonHidden ? 0 : 1 }}
-              className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground text-xs sm:text-sm transition cursor-pointer"
-              title={isButtonHidden ? 'Show Screenshot button' : 'Screenshot options'}
-            >
-              <Camera size={14} />
-              <span className="hidden sm:inline">Screenshot</span>
-            </button>
-            {showCameraMenu && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setShowCameraMenu(false)} />
-                <div className="absolute top-full right-0 mt-1 bg-container border border-border rounded-lg shadow-lg z-50 min-w-[190px] py-1 text-sm">
-                  <button
-                    className="w-full text-left px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted/40 transition cursor-pointer"
-                    onClick={() => { setShowCameraMenu(false); handleScreenshot(); }}
-                  >
-                    Screenshot the table
-                  </button>
-                  <button
-                    className="w-full text-left px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted/40 transition cursor-pointer"
-                    onClick={() => { setShowCameraMenu(false); setPromoMode(true); }}
-                  >
-                    Highlight one stable
-                  </button>
-                  <button
-                    className="w-full text-left px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted/40 transition cursor-pointer"
-                    onClick={() => { setShowCameraMenu(false); setIsButtonHidden(v => !v); }}
-                  >
-                    {isButtonHidden ? 'Show Screenshot button' : 'Hide Screenshot button'}
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+          <ScreenshotMenu highlightLabel="Highlight one stable" onScreenshot={handleScreenshot} onHighlight={() => setPromoMode(true)} />
           <div className="overflow-x-auto lg:overflow-x-visible">
             <div className={`${scrollableBody ? 'max-h-[60vh]' : ''} `}>
               <table className="w-full text-left text-foreground min-w-[800px]">
@@ -499,34 +421,7 @@ export default function FuturisticTable({
         )}
       </AnimatePresence>
 
-      {/* Promo image preview modal */}
-      {promoPreview && (
-        <div
-          className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-          onClick={() => setPromoPreview(null)}
-        >
-          <div
-            className="bg-container rounded-xl shadow-2xl overflow-hidden max-w-4xl w-full"
-            onClick={e => e.stopPropagation()}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={promoPreview.dataUrl} alt="Promo preview" className="w-full" />
-            <div className="flex gap-3 justify-end p-3 border-t border-border">
-              <button
-                onClick={() => setPromoPreview(null)}
-                className="cursor-pointer px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition"
-              >
-                Close
-              </button>
-              <a href={promoPreview.dataUrl} download={promoPreview.filename}>
-                <button className="cta-button cursor-pointer px-4 py-2 text-sm text-foreground">
-                  Download
-                </button>
-              </a>
-            </div>
-          </div>
-        </div>
-      )}
+      <ImagePreviewModal image={promoPreview} onClose={() => setPromoPreview(null)} />
 
       {/* Off-screen screenshot template — rendered only during capture */}
       {screenshotData && (

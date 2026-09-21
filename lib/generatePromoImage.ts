@@ -1,3 +1,8 @@
+export interface PromoBullet {
+  icon: 'recycle' | 'zap' | 'vault' | 'lock' | 'unlock' | 'layers';
+  text: string;
+}
+
 export interface PromoRowData {
   symbol: string;
   project: string;
@@ -14,6 +19,14 @@ export interface PromoRowData {
   isVault?: boolean;
   lockup?: string;
   chartHistory?: { apy: number; tvlUsd: number }[];
+  // logos of a pair's coins, drawn overlapping in place of the token logo
+  coinImageUrls?: string[];
+  // name of the yield value, APY by default
+  apyLabel?: string;
+  // below the rank, "On stableyields.info" by default
+  rankLabel?: string;
+  // in place of the stablecoin bullets
+  bullets?: PromoBullet[];
 }
 
 // ── Lucide-compatible SVG paths (viewBox 0 0 24 24, stroke-based) ──────────
@@ -146,6 +159,7 @@ export async function generatePromoImage(
 
   // Load all images and icons concurrently
   const ICON_PX = 32; // SVG render size (2x for retina canvas)
+  const coinResults = await Promise.allSettled((row.coinImageUrls || []).map(url => url ? loadImage(url) : Promise.reject(null)));
   const [
     tableResult, tokenResult, projectResult,
     icoRepeat, icoZap, icoArchive, icoLock, icoCheck2, icoLayers, icoGlobe,
@@ -165,6 +179,9 @@ export async function generatePromoImage(
   const tableImg   = tableResult.status   === 'fulfilled' ? tableResult.value   : null;
   const tokenImg   = tokenResult.status   === 'fulfilled' ? tokenResult.value   : null;
   const projectImg = projectResult.status === 'fulfilled' ? projectResult.value : null;
+  const logoImgs = coinResults.length
+    ? coinResults.map(result => result.status === 'fulfilled' ? result.value : null)
+    : [tokenImg];
   const lucideImgs: Record<keyof typeof LUCIDE_PATHS, HTMLImageElement | null> = {
     repeat:  icoRepeat.status  === 'fulfilled' ? icoRepeat.value  : null,
     zap:     icoZap.status     === 'fulfilled' ? icoZap.value     : null,
@@ -213,12 +230,28 @@ export async function generatePromoImage(
     ctx.restore();
   }
 
+  // Pair logos overlap like in the tables, each one ringed with the background to separate it from the previous one
+  const logosStep = (r: number) => Math.round(r * 1.45);
+  const logosWidth = (count: number, r: number) => r * 2 + (count - 1) * logosStep(r);
+  function drawLogos(imgs: (HTMLImageElement | null)[], left: number, cy: number, r: number) {
+    imgs.forEach((img, i) => {
+      const cx = left + r + i * logosStep(r);
+      if (i > 0) {
+        ctx.beginPath();
+        ctx.arc(cx, cy, r + 2, 0, Math.PI * 2);
+        ctx.fillStyle = BG;
+        ctx.fill();
+      }
+      drawLogo(img, cx, cy, r);
+    });
+    return logosWidth(imgs.length, r);
+  }
+
   let lx = 24;
   ctx.textBaseline = 'middle';
   ctx.textAlign = 'left';
 
-  drawLogo(tokenImg, lx + LOGO_R, TM, LOGO_R);
-  lx += LOGO_R * 2 + 7;
+  lx += drawLogos(logoImgs, lx, TM, LOGO_R) + 7;
 
   ctx.fillStyle = MUTED;
   ctx.font = `500 13px ${font}`;
@@ -264,9 +297,11 @@ export async function generatePromoImage(
 
   if (tableImg) {
     const ratio = tableImg.width / tableImg.height;
+    // tall tables stop above the disclaimer
+    const maxTh = lpH - LP_PAD * 2 - 24;
     let tw = lpW - LP_PAD * 2;
     let th = tw / ratio;
-    if (th > lpH - LP_PAD * 2) { th = lpH - LP_PAD * 2; tw = th * ratio; }
+    if (th > maxTh) { th = maxTh; tw = th * ratio; }
     const tx = (lpW - tw) / 2;
     const ty = TOP_H + (lpH - th) / 2;
 
@@ -319,13 +354,20 @@ export async function generatePromoImage(
   // Token logo inline with symbol
   const HEADER_LOGO_R = 26;
   const symbolBaseline = ry + 62;
-  drawLogo(tokenImg, RP_X + HEADER_LOGO_R, symbolBaseline - 22, HEADER_LOGO_R);
+  const symbolX = RP_X + logosWidth(logoImgs.length, HEADER_LOGO_R) + 14;
 
-  // Token symbol (large)
+  // Token symbol (large), smaller for long pair names to fit the panel
+  let symbolSize = 62;
+  ctx.font = `bold ${symbolSize}px ${font}`;
+  while (symbolSize > 30 && ctx.measureText(row.symbol).width > RP_RIGHT - symbolX) {
+    symbolSize -= 2;
+    ctx.font = `bold ${symbolSize}px ${font}`;
+  }
+  drawLogos(logoImgs, RP_X, symbolBaseline - Math.round(symbolSize * 0.355), HEADER_LOGO_R);
+
   ctx.fillStyle = TEXT;
-  ctx.font = `bold 62px ${font}`;
   ctx.textBaseline = 'alphabetic';
-  ctx.fillText(row.symbol, RP_X + HEADER_LOGO_R * 2 + 14, symbolBaseline);
+  ctx.fillText(row.symbol, symbolX, symbolBaseline);
   ry += 72;
 
   if (rank <= 3) {
@@ -339,7 +381,7 @@ export async function generatePromoImage(
     ry += 20;
     ctx.fillStyle = MUTED;
     ctx.font = `13px ${font}`;
-    ctx.fillText('On stableyields.info', RP_X, ry);
+    ctx.fillText(row.rankLabel || 'On stableyields.info', RP_X, ry);
     ry += 26;
 
     drawSep(ry);
@@ -348,18 +390,21 @@ export async function generatePromoImage(
   ry += 28;
 
   // ── Combined 2×2 card: APY row (top) + TVL row (bottom) ─────────────────
-  const bullets: { icon: string; text: string }[] = [
+  const bullets: PromoBullet[] = row.bullets || [
     { icon: 'recycle', text: 'Auto-compounding' },
     { icon: 'zap',     text: 'Zap-in with USDC or another stable' },
-    ...(row.isVault ? [{ icon: 'vault',  text: 'ERC-4626 Tokenized Vault' }] : []),
+    ...(row.isVault ? [{ icon: 'vault' as const,  text: 'ERC-4626 Tokenized Vault' }] : []),
     ...(row.lockup
-      ? [{ icon: 'lock',   text: `Lockup: ${row.lockup}` }]
-      : [{ icon: 'unlock', text: 'No lockup' }]),
-    ...(row.underlyingSymbol ? [{ icon: 'layers', text: `Underlying: ${row.underlyingSymbol}` }] : []),
+      ? [{ icon: 'lock' as const,   text: `Lockup: ${row.lockup}` }]
+      : [{ icon: 'unlock' as const, text: 'No lockup' }]),
+    ...(row.underlyingSymbol ? [{ icon: 'layers' as const, text: `Underlying: ${row.underlyingSymbol}` }] : []),
   ];
+  const apyLabel = row.apyLabel || 'APY';
+  // without history the card is a single row: APY | TVL
+  const hasHistory = (row.chartHistory?.length ?? 0) >= 2;
 
   const ROW_H = 104;
-  const COMBO_CARD_H = ROW_H * 2 + 1;
+  const COMBO_CARD_H = hasHistory ? ROW_H * 2 + 1 : ROW_H;
   const combDivX = Math.round(RP_X + RP_W / 2);
   const valueCX = Math.round(RP_X + RP_W / 4);
   const blockH = 62;
@@ -373,66 +418,71 @@ export async function generatePromoImage(
   ctx.moveTo(combDivX, ry + 8); ctx.lineTo(combDivX, ry + COMBO_CARD_H - 8);
   ctx.stroke();
 
-  // Horizontal divider (between rows)
-  ctx.beginPath();
-  ctx.moveTo(RP_X + 12, ry + ROW_H); ctx.lineTo(RP_RIGHT - 12, ry + ROW_H);
-  ctx.stroke();
-
-  // Sparkline layout: chart on the left, y-axis labels on the RIGHT side
-  const SP_PAD_X = 14;
-  const SP_PAD_Y = 12;
-  const YLABEL_W = 34; // reserved width on the right for y-axis labels
-  const LABEL_H = 16;  // height reserved for "90d …" row label
-  const chartLX = combDivX + SP_PAD_X;
-  const chartW = RP_RIGHT - SP_PAD_X - YLABEL_W - chartLX;
-  const yLabelX = RP_RIGHT - SP_PAD_X; // y-axis labels right-aligned here
-  const chartRowH = ROW_H - SP_PAD_Y * 2 - LABEL_H;
-  const chartRowY = (rowIdx: number) => ry + rowIdx * ROW_H + SP_PAD_Y + LABEL_H;
-
-  // ── APY row ──────────────────────────────────────────────────────────────
-  const apyTopY = ry + (ROW_H - blockH) / 2;
-  ctx.textAlign = 'center';
-  ctx.fillStyle = TEXT; ctx.font = `bold 18px ${font}`; ctx.textBaseline = 'alphabetic';
-  ctx.fillText('APY', valueCX, apyTopY + 13);
-  ctx.fillStyle = GREEN; ctx.font = `bold 50px ${font}`;
-  ctx.fillText(row.apy ? `${row.apy.toFixed(2)}%` : '-', valueCX, apyTopY + 62);
-
-  ctx.fillStyle = MUTED; ctx.font = `bold 11px ${font}`;
-  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-  ctx.fillText('90d APY', combDivX + SP_PAD_X, ry + SP_PAD_Y);
-
-  const apyPts = (row.chartHistory || []).map(p => ({ value: p.apy }));
-  const apyVals = apyPts.map(p => p.value).filter(v => !isNaN(v) && v >= 0);
-  if (apyVals.length >= 2) {
-    drawSparkline(ctx, apyPts, chartLX, chartRowY(0), chartW, chartRowH, GREEN, isDark);
-    ctx.fillStyle = MUTED; ctx.font = `8px ${font}`; ctx.textAlign = 'right';
-    ctx.textBaseline = 'top';
-    ctx.fillText(`${Math.max(...apyVals).toFixed(1)}%`, yLabelX, chartRowY(0));
-    ctx.textBaseline = 'bottom';
-    ctx.fillText(`${Math.min(...apyVals).toFixed(1)}%`, yLabelX, chartRowY(0) + chartRowH);
+  function drawValue(label: string, value: string, cx: number, topY: number) {
+    ctx.textAlign = 'center';
+    ctx.fillStyle = TEXT; ctx.font = `bold 18px ${font}`; ctx.textBaseline = 'alphabetic';
+    ctx.fillText(label, cx, topY + 13);
+    ctx.fillStyle = GREEN; ctx.font = `bold 50px ${font}`;
+    ctx.fillText(value, cx, topY + 62);
   }
+  const apyValue = row.apy ? `${row.apy.toFixed(2)}%` : '-';
 
-  // ── TVL row ───────────────────────────────────────────────────────────────
-  const tvlTopY = ry + ROW_H + (ROW_H - blockH) / 2;
-  ctx.textAlign = 'center';
-  ctx.fillStyle = TEXT; ctx.font = `bold 18px ${font}`; ctx.textBaseline = 'alphabetic';
-  ctx.fillText('TVL', valueCX, tvlTopY + 13);
-  ctx.fillStyle = GREEN; ctx.font = `bold 50px ${font}`;
-  ctx.fillText(formatTvl(row.tvl), valueCX, tvlTopY + 62);
+  if (!hasHistory) {
+    const topY = ry + (ROW_H - blockH) / 2;
+    drawValue(apyLabel, apyValue, valueCX, topY);
+    drawValue('TVL', formatTvl(row.tvl), Math.round(RP_X + RP_W * 3 / 4), topY);
+  } else {
+    // Horizontal divider (between rows)
+    ctx.beginPath();
+    ctx.moveTo(RP_X + 12, ry + ROW_H); ctx.lineTo(RP_RIGHT - 12, ry + ROW_H);
+    ctx.stroke();
 
-  ctx.fillStyle = MUTED; ctx.font = `bold 11px ${font}`;
-  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-  ctx.fillText('90d TVL', combDivX + SP_PAD_X, ry + ROW_H + SP_PAD_Y);
+    // Sparkline layout: chart on the left, y-axis labels on the RIGHT side
+    const SP_PAD_X = 14;
+    const SP_PAD_Y = 12;
+    const YLABEL_W = 34; // reserved width on the right for y-axis labels
+    const LABEL_H = 16;  // height reserved for "90d …" row label
+    const chartLX = combDivX + SP_PAD_X;
+    const chartW = RP_RIGHT - SP_PAD_X - YLABEL_W - chartLX;
+    const yLabelX = RP_RIGHT - SP_PAD_X; // y-axis labels right-aligned here
+    const chartRowH = ROW_H - SP_PAD_Y * 2 - LABEL_H;
+    const chartRowY = (rowIdx: number) => ry + rowIdx * ROW_H + SP_PAD_Y + LABEL_H;
 
-  const tvlPts = (row.chartHistory || []).map(p => ({ value: p.tvlUsd }));
-  const tvlVals = tvlPts.map(p => p.value).filter(v => !isNaN(v) && v >= 0);
-  if (tvlVals.length >= 2) {
-    drawSparkline(ctx, tvlPts, chartLX, chartRowY(1), chartW, chartRowH, GREEN, isDark);
-    ctx.fillStyle = MUTED; ctx.font = `8px ${font}`; ctx.textAlign = 'right';
-    ctx.textBaseline = 'top';
-    ctx.fillText(formatTvl(Math.max(...tvlVals)), yLabelX, chartRowY(1));
-    ctx.textBaseline = 'bottom';
-    ctx.fillText(formatTvl(Math.min(...tvlVals)), yLabelX, chartRowY(1) + chartRowH);
+    // ── APY row ────────────────────────────────────────────────────────────
+    drawValue(apyLabel, apyValue, valueCX, ry + (ROW_H - blockH) / 2);
+
+    ctx.fillStyle = MUTED; ctx.font = `bold 11px ${font}`;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText(`90d ${apyLabel}`, combDivX + SP_PAD_X, ry + SP_PAD_Y);
+
+    const apyPts = (row.chartHistory || []).map(p => ({ value: p.apy }));
+    const apyVals = apyPts.map(p => p.value).filter(v => !isNaN(v) && v >= 0);
+    if (apyVals.length >= 2) {
+      drawSparkline(ctx, apyPts, chartLX, chartRowY(0), chartW, chartRowH, GREEN, isDark);
+      ctx.fillStyle = MUTED; ctx.font = `8px ${font}`; ctx.textAlign = 'right';
+      ctx.textBaseline = 'top';
+      ctx.fillText(`${Math.max(...apyVals).toFixed(1)}%`, yLabelX, chartRowY(0));
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(`${Math.min(...apyVals).toFixed(1)}%`, yLabelX, chartRowY(0) + chartRowH);
+    }
+
+    // ── TVL row ────────────────────────────────────────────────────────────
+    drawValue('TVL', formatTvl(row.tvl), valueCX, ry + ROW_H + (ROW_H - blockH) / 2);
+
+    ctx.fillStyle = MUTED; ctx.font = `bold 11px ${font}`;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText('90d TVL', combDivX + SP_PAD_X, ry + ROW_H + SP_PAD_Y);
+
+    const tvlPts = (row.chartHistory || []).map(p => ({ value: p.tvlUsd }));
+    const tvlVals = tvlPts.map(p => p.value).filter(v => !isNaN(v) && v >= 0);
+    if (tvlVals.length >= 2) {
+      drawSparkline(ctx, tvlPts, chartLX, chartRowY(1), chartW, chartRowH, GREEN, isDark);
+      ctx.fillStyle = MUTED; ctx.font = `8px ${font}`; ctx.textAlign = 'right';
+      ctx.textBaseline = 'top';
+      ctx.fillText(formatTvl(Math.max(...tvlVals)), yLabelX, chartRowY(1));
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(formatTvl(Math.min(...tvlVals)), yLabelX, chartRowY(1) + chartRowH);
+    }
   }
 
   ry += COMBO_CARD_H + 16;
@@ -467,10 +517,15 @@ export async function generatePromoImage(
   // Disclaimer — bottom left
   ctx.font = `10px ${font}`;
   ctx.textAlign = 'left';
-  ctx.fillText('APY variable. Past performance not indicative of future results.', LP_PAD, footerY + 5);
+  ctx.fillText(`${/\bAPR\b/.test(apyLabel) ? 'APR' : 'APY'} variable. Past performance not indicative of future results.`, LP_PAD, footerY + 5);
 
-  // Globe + link — bottom right
-  ctx.font = `bold 14px ${font}`;
+  // Globe + link — bottom right, smaller for long links to stay within the panel
+  let linkSize = 14;
+  ctx.font = `bold ${linkSize}px ${font}`;
+  while (linkSize > 10 && ctx.measureText(displayLink).width > RP_W - FOOTER_ICON - 8) {
+    linkSize -= 1;
+    ctx.font = `bold ${linkSize}px ${font}`;
+  }
   ctx.textAlign = 'right';
   const linkW = ctx.measureText(displayLink).width;
   if (lucideImgs.globe) {

@@ -18,12 +18,24 @@ function getClient(): EnsoClient {
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 1500;
+// the API key allows about one request per second
+const MIN_REQUEST_INTERVAL_MS = 1100;
+
+let nextRequestAt = 0;
+
+// Spaces out the Enso requests of this runtime, so concurrent ones don't get rate limited
+function scheduleRequest<T>(fn: () => Promise<T>): Promise<T> {
+  const now = Date.now();
+  const startAt = Math.max(now, nextRequestAt);
+  nextRequestAt = startAt + MIN_REQUEST_INTERVAL_MS;
+  return new Promise(resolve => setTimeout(resolve, startAt - now)).then(fn);
+}
 
 async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
   let lastError: unknown;
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
-      return await fn();
+      return await scheduleRequest(fn);
     } catch (err) {
       lastError = err;
       if (attempt < MAX_RETRIES - 1) {
@@ -70,11 +82,40 @@ export async function fetchEnsoApproval(params: {
   }));
 }
 
-export async function fetchEnsoBalances(address: `0x${string}`) {
+export async function fetchEnsoPrices(addresses: `0x${string}`[]) {
   const enso = getClient();
-  return withRetry(() => enso.getBalances({
+  return withRetry(() => enso.getMultiplePriceData({
+    chainId: 1,
+    addresses,
+  }));
+}
+
+export async function fetchEnsoTokensData(addresses: `0x${string}`[]) {
+  const enso = getClient();
+  return withRetry(() => enso.getTokenData({
+    chainId: 1,
+    address: addresses,
+    includeMetadata: true,
+    includeUnderlying: true,
+  }));
+}
+
+// components loading the balances at the same time (e.g. on wallet connect) share the request
+const BALANCES_REUSE_MS = 5_000;
+const balanceRequests = new Map<string, { promise: ReturnType<EnsoClient['getBalances']>; startedAt: number }>();
+
+export function fetchEnsoBalances(address: `0x${string}`) {
+  const key = address.toLowerCase();
+  const recent = balanceRequests.get(key);
+  if (recent && Date.now() - recent.startedAt < BALANCES_REUSE_MS) return recent.promise;
+
+  const enso = getClient();
+  const promise = withRetry(() => enso.getBalances({
     chainId: 1,
     eoaAddress: address,
     useEoa: true,
   }));
+  balanceRequests.set(key, { promise, startedAt: Date.now() });
+  promise.catch(() => balanceRequests.delete(key));
+  return promise;
 }
