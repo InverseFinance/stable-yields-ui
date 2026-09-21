@@ -9,6 +9,9 @@ export interface SupportedToken {
   price?: number;
   isIdleStable?: boolean;
   isStablish?: boolean;
+  // yield positions and LP tokens used as swap sources or destinations
+  isVault?: boolean;
+  isLp?: boolean;
   coingeckoId: string;
 }
 

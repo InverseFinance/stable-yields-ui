@@ -1,7 +1,7 @@
-import { createPublicClient, erc20Abi, fallback, formatUnits, http, isAddress, parseAbi, parseUnits } from 'viem';
-import { mainnet } from 'viem/chains';
+import { erc20Abi, formatUnits, isAddress, parseAbi, parseUnits } from 'viem';
 import { LpData, StakingData } from '@/app/types';
 import { fetchJson, getMainListCoins, hasMainListCoin, MIN_POOL_TVL_USD, REQUEST_TIMEOUT_MS, toLpCoins, withTimeout } from '@/lib/lps';
+import { publicClient } from '@/lib/rpc';
 
 const CONVEX_POOLS_API = 'https://curve.convexfinance.com/api/curve/pools';
 const CONVEX_APYS_API = 'https://curve.convexfinance.com/api/curve-apys';
@@ -24,20 +24,11 @@ const rewardPoolAbi = parseAbi([
 // reward tokens of Convex stashes can be wrapped, the wrapper exposes the underlying token
 const stashTokenWrapperAbi = parseAbi(['function token() view returns (address)']);
 
-// concurrent reads are batched into multicalls
-const client = createPublicClient({
-  chain: mainnet,
-  batch: { multicall: true },
-  transport: fallback([
-    ...(process.env.RPC_URL ? [http(process.env.RPC_URL)] : []),
-    http(),
-    http('https://ethereum-rpc.publicnode.com'),
-  ]),
-});
-
 interface ConvexApiPool {
   name: string;
   lpTokenAddress: string;
+  // virtual price of the Curve pool, 18 decimals
+  virtualPrice: string;
   usdTotal: number;
   baseApy?: number;
   isBroken?: boolean;
@@ -72,17 +63,17 @@ function getCvxPerCrv(cvxSupply: bigint) {
 
 async function readRewardStream(address: `0x${string}`): Promise<RewardStream> {
   const [rewardRate, periodFinish] = await Promise.all([
-    client.readContract({ address, abi: rewardPoolAbi, functionName: 'rewardRate' }),
-    client.readContract({ address, abi: rewardPoolAbi, functionName: 'periodFinish' }),
+    publicClient.readContract({ address, abi: rewardPoolAbi, functionName: 'rewardRate' }),
+    publicClient.readContract({ address, abi: rewardPoolAbi, functionName: 'periodFinish' }),
   ]);
   return { rewardRate, periodFinish };
 }
 
 async function readExtraRewardToken(rewardPool: `0x${string}`) {
-  const rewardToken = await client.readContract({ address: rewardPool, abi: rewardPoolAbi, functionName: 'rewardToken' });
-  const token = await client.readContract({ address: rewardToken, abi: stashTokenWrapperAbi, functionName: 'token' })
+  const rewardToken = await publicClient.readContract({ address: rewardPool, abi: rewardPoolAbi, functionName: 'rewardToken' });
+  const token = await publicClient.readContract({ address: rewardToken, abi: stashTokenWrapperAbi, functionName: 'token' })
     .catch(() => rewardToken);
-  const decimals = await client.readContract({ address: token, abi: erc20Abi, functionName: 'decimals' });
+  const decimals = await publicClient.readContract({ address: token, abi: erc20Abi, functionName: 'decimals' });
   return { token, decimals };
 }
 
@@ -90,11 +81,11 @@ async function readExtraRewardToken(rewardPool: `0x${string}`) {
 async function readPoolRewards(rewardPool: `0x${string}`) {
   const [crv, extrasLength] = await Promise.all([
     readRewardStream(rewardPool),
-    client.readContract({ address: rewardPool, abi: rewardPoolAbi, functionName: 'extraRewardsLength' }),
+    publicClient.readContract({ address: rewardPool, abi: rewardPoolAbi, functionName: 'extraRewardsLength' }),
   ]);
   const extraPools = await Promise.all(
     Array.from({ length: Number(extrasLength) }, (_, i) =>
-      client.readContract({ address: rewardPool, abi: rewardPoolAbi, functionName: 'extraRewards', args: [BigInt(i)] })
+      publicClient.readContract({ address: rewardPool, abi: rewardPoolAbi, functionName: 'extraRewards', args: [BigInt(i)] })
     ),
   );
   const extras = await Promise.all(extraPools.map(async address => {
@@ -124,7 +115,7 @@ async function fetchConvexCrvPrice(): Promise<number | undefined> {
 async function fetchRewardAprs(pools: ConvexApiPool[], convexCrvPrice?: number): Promise<number[]> {
   const [poolsRewards, cvxSupply] = await Promise.all([
     Promise.all(pools.map(p => readPoolRewards(p.convexPoolData.crvRewards as `0x${string}`))),
-    client.readContract({ address: CVX_ADDRESS, abi: erc20Abi, functionName: 'totalSupply' }),
+    publicClient.readContract({ address: CVX_ADDRESS, abi: erc20Abi, functionName: 'totalSupply' }),
   ]);
   const prices = await fetchLlamaPrices([
     CRV_ADDRESS,
@@ -169,15 +160,25 @@ export async function fetchConvexLps(rates: StakingData[]): Promise<LpData[]> {
 
     return matchingPools.map((p, i) => {
       const coins = toLpCoins(p.coins, mainListCoins);
+      const symbol = coins.map(c => c.symbol).join('/');
+      const totalApr = (p.baseApy || 0) + rewardAprs[i];
       return {
         address: p.lpTokenAddress as `0x${string}`,
         name: p.name,
-        symbol: coins.map(c => c.symbol).join('/'),
+        symbol,
         project: 'Convex',
         coins,
         tvl: p.convexPoolData.usdTotal,
-        totalApr: (p.baseApy || 0) + rewardAprs[i],
+        totalApr,
         link: getConvexPoolUrl(p.convexPoolData.id),
+        // LP tokens staked in the Convex reward contract, valued at the Curve pool's virtual price
+        position: {
+          address: p.convexPoolData.crvRewards as `0x${string}`,
+          decimals: 18,
+          symbol: `${symbol} LP`,
+          apr: totalApr,
+          price: Number(p.virtualPrice) / 1e18 || undefined,
+        },
       };
     });
   } catch (err) {

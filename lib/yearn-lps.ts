@@ -1,7 +1,7 @@
 import { isAddress } from 'viem';
 import { LpData, StakingData } from '@/app/types';
 import { fetchEnsoTokensData } from '@/lib/enso';
-import { fetchEnsoPriceMap, fetchJson, getMainListCoins, hasMainListCoin, toLpCoins, withTimeout } from '@/lib/lps';
+import { fetchCurveVirtualPrices, fetchEnsoPriceMap, fetchJson, getMainListCoins, hasMainListCoin, toLpCoins, withTimeout } from '@/lib/lps';
 
 const YEARN_VAULTS_API = 'https://kong.yearn.fi/api/rest/list/vaults/1';
 const MIN_VAULT_TVL_USD = 100_000;
@@ -11,6 +11,8 @@ interface YearnApiVault {
   name: string;
   decimals: number;
   tvl: number;
+  // LP tokens per share, with the vault decimals
+  pricePerShare: number | null;
   isRetired: boolean;
   isHidden: boolean;
   asset: { address: string; name: string };
@@ -39,9 +41,11 @@ export async function fetchYearnLps(rates: StakingData[]): Promise<LpData[]> {
     if (!vaults.length) return [];
 
     // the Yearn API doesn't list the LP coins, Enso resolves them with their addresses
-    const [lpTokens, vaultPrices] = await Promise.all([
-      withTimeout(fetchEnsoTokensData(vaults.map(v => v.asset.address as `0x${string}`))),
+    const assetAddresses = vaults.map(v => v.asset.address as `0x${string}`);
+    const [lpTokens, vaultPrices, lpVirtualPrices] = await Promise.all([
+      withTimeout(fetchEnsoTokensData(assetAddresses)),
       fetchEnsoPriceMap(vaults.map(v => v.address as `0x${string}`)),
+      fetchCurveVirtualPrices(assetAddresses),
     ]);
     const lpCoinsByAsset = new Map(lpTokens.data.map(t => [t.address.toLowerCase(), t.underlyingTokens || []]));
 
@@ -59,6 +63,18 @@ export async function fetchYearnLps(rates: StakingData[]): Promise<LpData[]> {
 
       const symbol = coins.map(c => c.symbol).join('/');
       const totalApr = (v.performance?.estimated?.apy || 0) * 100;
+      const vaultShare = {
+        address: v.address as `0x${string}`,
+        decimals: v.decimals,
+        symbol: `${symbol} vault`,
+        // the vault compounds all the rewards for its holders
+        apr: totalApr,
+        price: vaultPrices[v.address.toLowerCase()],
+      };
+      const lpVirtualPrice = lpVirtualPrices[v.asset.address.toLowerCase()];
+      const sharePrice = v.pricePerShare && lpVirtualPrice
+        ? v.pricePerShare / 10 ** v.decimals * lpVirtualPrice
+        : undefined;
       return [{
         address: v.asset.address as `0x${string}`,
         name: v.name,
@@ -68,14 +84,9 @@ export async function fetchYearnLps(rates: StakingData[]): Promise<LpData[]> {
         tvl: v.tvl,
         totalApr,
         link: getYearnVaultUrl(v.address),
-        zap: {
-          tokenAddress: v.address as `0x${string}`,
-          decimals: v.decimals,
-          symbol: `${symbol} vault`,
-          // the vault compounds all the rewards for its holders
-          apr: totalApr,
-          price: vaultPrices[v.address.toLowerCase()],
-        },
+        zap: vaultShare,
+        // vault shares are worth pricePerShare LP tokens, valued at the Curve pool's virtual price
+        position: { ...vaultShare, price: sharePrice ?? vaultShare.price },
       }];
     });
   } catch (err) {

@@ -27,6 +27,8 @@ export async function fetchStakeDaoLps(rates: StakingData[]): Promise<LpData[]> 
     const mainListCoins = getMainListCoins(rates);
     const vaults = (await fetchJson<StakeDaoApiVault[]>(STAKE_DAO_VAULTS_API)).filter(v =>
       v.chainId === 1
+      // Llamalend lending vaults supply crvUSD against a collateral, they aren't pairs
+      && !v.isLending
       && v.tvl >= MIN_VAULT_TVL_USD
       && isAddress(v.vault, { strict: false })
       && isAddress(v.lpToken.address, { strict: false })
@@ -35,9 +37,17 @@ export async function fetchStakeDaoLps(rates: StakingData[]): Promise<LpData[]> 
 
     return vaults.map(v => {
       const coins = toLpCoins(v.coins, mainListCoins);
-      // a lending vault supplies one coin against the other as collateral, it's not a pair
-      const symbol = v.isLending ? v.name : coins.map(c => c.symbol).join('/');
+      const symbol = coins.map(c => c.symbol).join('/');
       const totalApr = v.apr.current.total || 0;
+      const vaultShare = {
+        address: v.vault as `0x${string}`,
+        // vault shares are minted 1:1 with LP tokens
+        decimals: v.lpToken.decimals,
+        symbol: `${symbol} vault`,
+        // the vault stakes the LP tokens and earns all the rewards for its holders
+        apr: totalApr,
+        price: v.lpPriceInUsd,
+      };
       return {
         address: v.lpToken.address as `0x${string}`,
         name: v.name,
@@ -47,15 +57,8 @@ export async function fetchStakeDaoLps(rates: StakingData[]): Promise<LpData[]> 
         tvl: v.tvl,
         totalApr,
         link: getStakeDaoVaultUrl(v),
-        zap: {
-          tokenAddress: v.vault as `0x${string}`,
-          // vault shares are minted 1:1 with LP tokens
-          decimals: v.lpToken.decimals,
-          symbol: `${symbol} vault`,
-          // the vault stakes the LP tokens and earns all the rewards for its holders
-          apr: totalApr,
-          price: v.lpPriceInUsd,
-        },
+        zap: vaultShare,
+        position: vaultShare,
       };
     });
   } catch (err) {

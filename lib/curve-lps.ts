@@ -1,6 +1,6 @@
 import { isAddress } from 'viem';
 import { LpData, StakingData } from '@/app/types';
-import { fetchEnsoPriceMap, fetchJson, getMainListCoins, hasMainListCoin, MIN_POOL_TVL_USD, toLpCoins } from '@/lib/lps';
+import { fetchCurveVirtualPrices, fetchEnsoPriceMap, fetchJson, getMainListCoins, hasMainListCoin, MIN_POOL_TVL_USD, toLpCoins } from '@/lib/lps';
 
 // stableswap-ng pools on Ethereum; the API caps pagination at 50
 const CURVE_POOLS_API = `https://prices.curve.finance/v2/pools/?pagination=50&pool_type=stableswapng&min_tvl=${MIN_POOL_TVL_USD}&chain_id=1&sort_by=aggregate_apr&sort_direction=desc`;
@@ -44,7 +44,11 @@ export async function fetchCurveLps(rates: StakingData[]): Promise<LpData[]> {
       isAddress(p.address, { strict: false }) && hasMainListCoin(p.coins, mainListCoins)
     );
 
-    const lpPrices = await fetchEnsoPriceMap(pools.map(p => p.address as `0x${string}`));
+    const poolAddresses = pools.map(p => p.address as `0x${string}`);
+    const [lpPrices, virtualPrices] = await Promise.all([
+      fetchEnsoPriceMap(poolAddresses),
+      fetchCurveVirtualPrices(poolAddresses),
+    ]);
 
     return pools.map(p => {
       const coins = toLpCoins(p.coins, mainListCoins);
@@ -56,6 +60,15 @@ export async function fetchCurveLps(rates: StakingData[]): Promise<LpData[]> {
       const rewardsApr = (p.crv_apr || 0)
         + (p.extra_rewards_apr || []).reduce((sum, r) => sum + (r.apr || 0), 0)
         + (p.merkle_apr || 0);
+      const zap = {
+        address,
+        // stableswap-ng LP tokens always have 18 decimals
+        decimals: 18,
+        symbol: `${symbol} LP`,
+        // holding the LP token only earns the base APR, rewards require staking it in the gauge
+        apr: baseApr,
+        price: lpPrices[address.toLowerCase()],
+      };
       return {
         address,
         name: p.name,
@@ -65,15 +78,9 @@ export async function fetchCurveLps(rates: StakingData[]): Promise<LpData[]> {
         tvl: p.tvl_usd,
         totalApr: baseApr + rewardsApr,
         link: getCurvePoolUrl(p.address),
-        zap: {
-          tokenAddress: address,
-          // stableswap-ng LP tokens always have 18 decimals
-          decimals: 18,
-          symbol: `${symbol} LP`,
-          // holding the LP token only earns the base APR, rewards require staking it in the gauge
-          apr: baseApr,
-          price: lpPrices[address.toLowerCase()],
-        },
+        zap,
+        // LP tokens held in the wallet, valued at the pool's virtual price
+        position: { ...zap, price: virtualPrices[address.toLowerCase()] ?? zap.price },
       };
     });
   } catch (err) {

@@ -1,5 +1,7 @@
+import { formatUnits, parseAbi } from 'viem';
 import { LpCoin, StakingData } from '@/app/types';
 import { fetchEnsoPrices } from '@/lib/enso';
+import { publicClient } from '@/lib/rpc';
 
 export const MIN_POOL_TVL_USD = 1_000_000;
 export const REQUEST_TIMEOUT_MS = 10_000;
@@ -54,6 +56,26 @@ export async function fetchEnsoPriceMap(addresses: `0x${string}`[]): Promise<Rec
     );
   } catch (err) {
     console.error('Failed to fetch Enso prices:', err);
+    return {};
+  }
+}
+
+const curvePoolAbi = parseAbi(['function get_virtual_price() view returns (uint256)']);
+
+// Curve pools virtual prices (LP token value in the pool's coins, ~USD for stable pools),
+// keyed by lowercase pool address, pools that can't be read are left out
+export async function fetchCurveVirtualPrices(pools: `0x${string}`[]): Promise<Record<string, number>> {
+  if (!pools.length) return {};
+  try {
+    const results = await withTimeout(Promise.allSettled(
+      pools.map(address => publicClient.readContract({ address, abi: curvePoolAbi, functionName: 'get_virtual_price' })),
+    ));
+    return Object.fromEntries(pools.flatMap((pool, i) => {
+      const result = results[i];
+      return result.status === 'fulfilled' ? [[pool.toLowerCase(), Number(formatUnits(result.value, 18))]] : [];
+    }));
+  } catch (err) {
+    console.error('Failed to fetch Curve virtual prices:', err);
     return {};
   }
 }

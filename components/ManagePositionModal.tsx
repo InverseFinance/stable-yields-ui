@@ -62,6 +62,7 @@ function buildDestTokens(
       vaultPrice: item.vaultPrice,
       apy: item.apy,
       isVault: item.isVault,
+      isLp: item.isLp,
     });
   }
 
@@ -129,7 +130,8 @@ export function ManagePositionModal({
 
   const baseSourceTokens = allPositions.map(positionToToken);
   const baseSourceAddrs = new Set(baseSourceTokens.map(t => t.address.toLowerCase()));
-  const destIsVault = !!(destToken as { isVault?: boolean }).isVault;
+  // wallet tokens can also be deposited into yield destinations (vaults and LPs)
+  const destIsYield = !!(destToken.isVault || destToken.isLp);
 
   const enrichWalletToken = (t: SupportedToken): SupportedToken => {
     const key = t.address.toLowerCase();
@@ -139,7 +141,7 @@ export function ManagePositionModal({
     return { ...t, price, usd };
   };
 
-  const extraWalletSources: SupportedToken[] = destIsVault
+  const extraWalletSources: SupportedToken[] = destIsYield
     ? SUPPORTED_TOKENS
       .filter(t => t.isIdleStable || !t.isStablish)
       .filter(t => !baseSourceAddrs.has(t.address.toLowerCase()))
@@ -205,7 +207,7 @@ export function ManagePositionModal({
     try { return parseUnits(amount, sourceDecimals).toString(); } catch { return '0'; }
   })();
 
-  const isDestStablish = destToken.isStablish || destToken.isVault;
+  const isDestStablish = destToken.isStablish || destToken.isVault || destToken.isLp;
   const isSourceStablish = sourceToken.isStablish || sourceToken.isVault;
   const isOneOfTwoStablish = ((isSourceStablish && !isDestStablish) || (!isSourceStablish && isDestStablish));
 
@@ -240,6 +242,9 @@ export function ManagePositionModal({
   const inputUsd = (() => {
     const qty = parseFloat(amount);
     if (!qty || qty <= 0) return 0;
+    if (sourceIsVault && currentSourcePos!.marketPrice) {
+      return qty * currentSourcePos!.marketPrice;
+    }
     if (sourceIsVault && currentSourcePos!.usdValue > 0 && currentSourcePos!.balance > 0) {
       return (qty / currentSourcePos!.balance) * currentSourcePos!.usdValue;
     }

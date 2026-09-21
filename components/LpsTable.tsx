@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { ExternalLink } from 'lucide-react';
-import { LpCoin, LpData, LpZap, StakingData } from '@/app/types';
+import { LpCoin, LpData, LpToken, StakingData } from '@/app/types';
 import { TokenPrices } from '@/lib/fetchTokenPrices';
 import { gaEvent } from '@/lib/analytics';
 import { smartShortNumber } from '@/lib/utils';
@@ -27,12 +27,12 @@ const formatApr = (apr: number) => apr ? `${apr.toFixed(2)}%` : '-';
 // without a price for the received token the zap card can't compare output worth with deposit worth
 const canZap = (lp: LpData) => !!lp.zap?.price;
 
-// Shape expected by the Enso zap card, with the zap token as output
-const toStakingData = (lp: LpData, zap: LpZap): StakingData => ({
+// Shape expected by the Enso zap card and the positions, for one of the LP tokens
+export const lpTokenToStakingData = (lp: LpData, token: LpToken): StakingData => ({
   symbol: lp.symbol,
-  zapSymbol: zap.symbol,
+  zapSymbol: token.symbol,
   project: lp.project,
-  apy: zap.apr,
+  apy: token.apr,
   avg30: 0,
   avg60: 0,
   avg90: 0,
@@ -40,18 +40,18 @@ const toStakingData = (lp: LpData, zap: LpZap): StakingData => ({
   link: lp.link,
   image: getProjectImageSrc(lp.project),
   isLp: true,
-  address: zap.tokenAddress,
-  vaultPrice: zap.price || 0,
+  address: token.address,
+  vaultPrice: token.price || 0,
   totalAssets: lp.tvl,
   totalAssets30d: 0,
   totalAssets90d: 0,
-  decimals: zap.decimals,
-  zapDecimals: zap.decimals,
+  decimals: token.decimals,
+  zapDecimals: token.decimals,
 });
 
-function CoinIcon({ coin }: { coin: LpCoin }) {
+function CoinIcon({ coin, sizeClassName }: { coin: LpCoin; sizeClassName: string }) {
   const [hasError, setHasError] = useState(false);
-  const className = 'rounded-full w-5 h-5 sm:w-7 sm:h-7 ring-2 ring-card shrink-0';
+  const className = `rounded-full ${sizeClassName} ring-2 ring-card shrink-0`;
 
   if (hasError) {
     return (
@@ -65,15 +65,24 @@ function CoinIcon({ coin }: { coin: LpCoin }) {
       className={className}
       src={coin.image}
       alt={coin.symbol}
-      width={24}
-      height={24}
+      width={32}
+      height={32}
       onError={() => setHasError(true)}
     />
   );
 }
 
-// Takes the place of the zap card, in the same frame, for pools that can't be zapped into
-function ZapUnavailableCard({ lp, message }: { lp: LpData; message: string }) {
+// Overlapping icons of the pool's coins
+export function LpCoinIcons({ coins, sizeClassName = 'w-5 h-5 sm:w-7 sm:h-7' }: { coins: LpCoin[]; sizeClassName?: string }) {
+  return (
+    <div className="flex -space-x-2 shrink-0">
+      {coins.map(coin => <CoinIcon key={coin.address} coin={coin} sizeClassName={sizeClassName} />)}
+    </div>
+  );
+}
+
+// Takes the place of the zap card, in the same frame, for pools that can't be zapped into or managed here
+export function LpInfoCard({ lp, message }: { lp: LpData; message: string }) {
   return (
     <div className="card-shine relative bg-container border border-white/[0.05] rounded-2xl">
       <div className="relative flex justify-center border-b border-white/[0.05] py-3.5 text-sm font-medium tracking-wide text-foreground">
@@ -101,7 +110,15 @@ function ZapUnavailableCard({ lp, message }: { lp: LpData; message: string }) {
   );
 }
 
-export function LpsTable({ lps, tokenPrices }: { lps: LpData[]; tokenPrices: TokenPrices }) {
+export function LpsTable({
+  lps,
+  tokenPrices,
+  onDepositSuccess,
+}: {
+  lps: LpData[];
+  tokenPrices: TokenPrices;
+  onDepositSuccess?: () => void;
+}) {
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'asc' | 'desc' }>({ key: 'totalApr', direction: 'desc' });
   const [selectedLp, setSelectedLp] = useState<LpData>();
   // the zap card stays mounted with the last zappable pool, so it doesn't reload when reopened
@@ -148,7 +165,7 @@ export function LpsTable({ lps, tokenPrices }: { lps: LpData[]; tokenPrices: Tok
       return `Zapping into ${lp.symbol} isn't available right now, you can still deposit on ${lp.project}.`;
     }
     // a row whose zap gives this pool's LP token, which can then be deposited on the project
-    const lpTokenZapRow = lps.find(other => canZap(other) && other.zap?.tokenAddress.toLowerCase() === lp.address.toLowerCase());
+    const lpTokenZapRow = lps.find(other => canZap(other) && other.zap?.address.toLowerCase() === lp.address.toLowerCase());
     return `Zapping isn't available for ${lp.project} pools, deposit on ${lp.project} to earn this APR.`
       + (lpTokenZapRow ? ` You can first zap into the LP token from the ${lpTokenZapRow.symbol} ${lpTokenZapRow.project} row, then stake it on ${lp.project}.` : '');
   };
@@ -188,9 +205,7 @@ export function LpsTable({ lps, tokenPrices }: { lps: LpData[]; tokenPrices: Tok
                 >
                   <td className={CELL_CLASS}>
                     <div className="flex items-center gap-2">
-                      <div className="flex -space-x-2">
-                        {lp.coins.map(coin => <CoinIcon key={coin.address} coin={coin} />)}
-                      </div>
+                      <LpCoinIcons coins={lp.coins} />
                       <span className="text-sm sm:text-base lg:text-lg" title={lp.name}>{lp.symbol}</span>
                     </div>
                   </td>
@@ -243,9 +258,12 @@ export function LpsTable({ lps, tokenPrices }: { lps: LpData[]; tokenPrices: Tok
           {zapLp?.zap && (
             <div hidden={!isZapAvailable}>
               <StakingCard
-                stakingData={toStakingData(zapLp, zapLp.zap)}
+                stakingData={lpTokenToStakingData(zapLp, zapLp.zap)}
                 tokenPrices={tokenPrices}
-                onSuccess={closeModal}
+                onSuccess={() => {
+                  closeModal();
+                  onDepositSuccess?.();
+                }}
               />
               {/* the received token doesn't earn the rewards by itself */}
               {zapLp.totalApr > zapLp.zap.apr && (
@@ -257,7 +275,7 @@ export function LpsTable({ lps, tokenPrices }: { lps: LpData[]; tokenPrices: Tok
             </div>
           )}
           {selectedLp && !isZapAvailable && (
-            <ZapUnavailableCard lp={selectedLp} message={getZapUnavailableMessage(selectedLp)} />
+            <LpInfoCard lp={selectedLp} message={getZapUnavailableMessage(selectedLp)} />
           )}
 
           {selectedLp && (
