@@ -5,20 +5,20 @@ import { fetchCurveLps } from "@/lib/curve-lps";
 import { fetchConvexLps } from "@/lib/convex-lps";
 import { fetchStakeDaoLps } from "@/lib/stakedao-lps";
 import { fetchYearnLps } from "@/lib/yearn-lps";
+import { fetchUsTreasuryYield } from "@/lib/treasury";
 
 export async function StableYieldsPageContent({ title, titleSize = 'text-5xl sm:text-8xl lg:text-8xl' }: { title: string, titleSize?: string }) {
-  const [stablesRes, usTreasuryRes, tokenPricesRes] = await Promise.allSettled([
+  // doesn't reject, and isn't needed by the other requests, so it runs alongside all of them
+  const usTreasuryYieldPromise = fetchUsTreasuryYield();
+  const [stablesRes, tokenPricesRes] = await Promise.allSettled([
     fetch(`https://www.inverse.finance/api/dola/sdola-comparator?v=2`),
-    fetch(`https://moneymatter.me/api/treasury/interest-rates`),
     fetchTokenPrices(),
   ])
   const json = stablesRes.status === 'fulfilled' ? await stablesRes.value.json() : { rates: [] };
   const tokenPrices = tokenPricesRes.status === 'fulfilled' ? tokenPricesRes.value : {};
 
-  const usTreasuryData = usTreasuryRes.status === 'fulfilled' ? await usTreasuryRes.value.json() : { data: [] };
-  const usTreasuryYield = usTreasuryData?.data?.length > 0 ? usTreasuryData.data[usTreasuryData.data.length - 1]?.BC_1MONTH : 0;
   const rates = json.rates.filter((r: StakingData) => !['sDAI'].includes(r.symbol));
-  const [chartResults, curveLps, convexLps, stakeDaoLps, yearnLps] = await Promise.all([
+  const [chartResults, curveLps, convexLps, stakeDaoLps, yearnLps, usTreasuryYield] = await Promise.all([
     Promise.allSettled(rates.map(async (r: StakingData) => {
       if (!r.pool) return [];
       const data = await fetch(`https://yields.llama.fi/chart/${r.pool}`);
@@ -29,6 +29,7 @@ export async function StableYieldsPageContent({ title, titleSize = 'text-5xl sm:
     fetchConvexLps(rates),
     fetchStakeDaoLps(rates),
     fetchYearnLps(rates),
+    usTreasuryYieldPromise,
   ]);
 
   const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];

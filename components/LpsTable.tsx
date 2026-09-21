@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { ExternalLink } from 'lucide-react';
@@ -8,7 +9,10 @@ import { LpCoin, LpData, LpToken, StakingData } from '@/app/types';
 import { TokenPrices } from '@/lib/fetchTokenPrices';
 import { gaEvent } from '@/lib/analytics';
 import { smartShortNumber } from '@/lib/utils';
-import { getProjectImageSrc } from './ScreenshotView';
+import { captureAsPng, fetchAsDataUrl, fetchDataUrlMap } from '@/lib/screenshot';
+import type { PromoBullet } from '@/lib/generatePromoImage';
+import { getLpKey, getProjectImageSrc, LpsScreenshotView } from './ScreenshotView';
+import { GeneratedImage, HighlightModeHint, ImagePreviewModal, ScreenshotMenu } from './ScreenshotMenu';
 import { StakingCard } from './StakingCard';
 
 type SortKey = 'symbol' | 'project' | 'totalApr' | 'tvl';
@@ -26,6 +30,24 @@ const formatApr = (apr: number) => apr ? `${apr.toFixed(2)}%` : '-';
 
 // without a price for the received token the zap card can't compare output worth with deposit worth
 const canZap = (lp: LpData) => !!lp.zap?.price;
+
+// rows in the screenshots, more when the highlighted pair is further down
+const SCREENSHOT_ROWS = 10;
+
+const toSlug = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+// What depositing gets you, listed in the pair's promo image
+const getPromoBullets = (lp: LpData): PromoBullet[] => [
+  ...(canZap(lp) ? [{ icon: 'zap' as const, text: 'Zap-in with USDC or another stable' }] : []),
+  // the zapped LP token earns the base APR, the rewards go to the gauge stakers
+  ...(lp.zap && lp.totalApr > lp.zap.apr
+    ? [{ icon: 'layers' as const, text: `${formatApr(lp.zap.apr)} base APR, ${formatApr(lp.totalApr - lp.zap.apr)} more when staked in the gauge` }]
+    : []),
+  ...(lp.project === 'Yearn' ? [{ icon: 'recycle' as const, text: 'Auto-compounding' }] : []),
+  ...(lp.project === 'Convex' ? [{ icon: 'layers' as const, text: 'Boosted CRV + CVX rewards' }] : []),
+  ...(lp.project === 'Stake DAO' ? [{ icon: 'layers' as const, text: 'Boosted CRV rewards' }] : []),
+  { icon: 'unlock', text: 'No lockup' },
+];
 
 // Shape expected by the Enso zap card and the positions, for one of the LP tokens
 export const lpTokenToStakingData = (lp: LpData, token: LpToken): StakingData => ({
@@ -124,15 +146,24 @@ export function LpsTable({
   // the zap card stays mounted with the last zappable pool, so it doesn't reload when reopened
   const [zapLp, setZapLp] = useState<LpData | undefined>(() => lps.find(canZap));
   const [isModalOpen, setIsModalOpen] = useState(false);
+  // picking the pair to generate a promo image for
+  const [promoMode, setPromoMode] = useState(false);
+  const [preview, setPreview] = useState<GeneratedImage | null>(null);
+  const [screenshot, setScreenshot] = useState<{ rows: LpData[]; imageMap: Record<string, string>; highlightedKey?: string } | null>(null);
+  const [screenshotKey, setScreenshotKey] = useState(0);
+  const screenshotRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!isModalOpen) return;
+    if (!isModalOpen && !promoMode && !preview) return;
     const handleEscKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setIsModalOpen(false);
+      if (event.key !== 'Escape') return;
+      if (preview) setPreview(null);
+      else if (promoMode) setPromoMode(false);
+      else setIsModalOpen(false);
     };
     window.addEventListener('keydown', handleEscKey);
     return () => window.removeEventListener('keydown', handleEscKey);
-  }, [isModalOpen]);
+  }, [isModalOpen, promoMode, preview]);
 
   const sortedLps = [...lps].sort((a, b) => {
     const aValue = a[sortConfig.key];
@@ -158,6 +189,63 @@ export function LpsTable({
 
   const closeModal = () => setIsModalOpen(false);
 
+  // Renders the off-screen table and captures it as a PNG data URL
+  const captureTable = async (highlighted?: LpData): Promise<string | null> => {
+    const highlightedIndex = highlighted ? sortedLps.indexOf(highlighted) : -1;
+    const rows = sortedLps.slice(0, Math.max(SCREENSHOT_ROWS, highlightedIndex + 1));
+    const imageMap = await fetchDataUrlMap(rows.flatMap(lp => [...lp.coins.map(coin => coin.image), getProjectImageSrc(lp.project)]));
+
+    flushSync(() => {
+      setScreenshotKey(k => k + 1);
+      setScreenshot({ rows, imageMap, highlightedKey: highlighted && getLpKey(highlighted) });
+    });
+    if (!screenshotRef.current) return null;
+
+    try {
+      return await captureAsPng(screenshotRef.current);
+    } finally {
+      setScreenshot(null);
+    }
+  };
+
+  const handleScreenshot = async () => {
+    const dataUrl = await captureTable();
+    if (dataUrl) setPreview({ dataUrl, filename: 'stable-pairs.png' });
+  };
+
+  const handlePromoClick = async (lp: LpData) => {
+    setPromoMode(false);
+    const tableDataUrl = await captureTable(lp);
+    if (!tableDataUrl) return;
+
+    const [coinImageUrls, projectImageUrl, { generatePromoImage }] = await Promise.all([
+      Promise.all(lp.coins.map(coin => fetchAsDataUrl(coin.image, 128))),
+      fetchAsDataUrl(getProjectImageSrc(lp.project)),
+      import('@/lib/generatePromoImage'),
+    ]);
+    const rank = [...lps].sort((a, b) => b.totalApr - a.totalApr).indexOf(lp) + 1;
+    const dataUrl = await generatePromoImage(tableDataUrl, {
+      symbol: lp.symbol,
+      project: lp.project,
+      projectLabel: lp.project,
+      apy: lp.totalApr,
+      apyLabel: 'Total APR',
+      avg30: 0,
+      avg90: 0,
+      tvl: lp.tvl,
+      tokenImageUrl: '',
+      coinImageUrls,
+      projectImageUrl,
+      link: lp.link,
+      underlyingStable: '',
+      underlyingSymbol: '',
+      rankLabel: 'In Stable Pairs on stableyields.info',
+      bullets: getPromoBullets(lp),
+    }, rank, document.documentElement.classList.contains('dark'));
+
+    setPreview({ dataUrl, filename: `stable-pairs-${toSlug(lp.symbol)}-${toSlug(lp.project)}.png` });
+  };
+
   const isZapAvailable = !!selectedLp && canZap(selectedLp);
 
   const getZapUnavailableMessage = (lp: LpData) => {
@@ -172,72 +260,80 @@ export function LpsTable({
 
   return (
     <div className="w-full">
+      {promoMode && (
+        <HighlightModeHint text="Click on a stable pair to generate an image for it" onCancel={() => setPromoMode(false)} />
+      )}
       <motion.div
         className="bg-container backdrop-blur-lg rounded-2xl p-2 sm:p-4 shadow-xl"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <div className="overflow-x-auto lg:overflow-x-visible">
-          <table className="w-full text-left text-foreground min-w-[640px]">
-            <thead>
-              <tr className="text-muted-foreground">
-                {COLUMNS.map(column => (
-                  <th
-                    key={column.key}
-                    className="min-w-[125px] p-2 sm:p-3 text-sm sm:text-base lg:text-xl cursor-pointer hover:text-primary transition whitespace-nowrap"
-                    onClick={() => handleSort(column.key)}
-                  >
-                    {column.label} {sortConfig.key === column.key && (sortConfig.direction === 'asc' ? '▲' : '▼')}
-                  </th>
-                ))}
-                <th className="p-2 sm:p-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {sortedLps.map(lp => (
-                <tr
-                  key={`${lp.project}-${lp.address}`}
-                  className="table-border hover:bg-muted/50 transition cursor-pointer sm:cursor-default"
-                  onClick={() => {
-                    if (window.innerWidth < 640) handleSupply(lp);
-                  }}
-                >
-                  <td className={CELL_CLASS}>
-                    <div className="flex items-center gap-2">
-                      <LpCoinIcons coins={lp.coins} />
-                      <span className="text-sm sm:text-base lg:text-lg" title={lp.name}>{lp.symbol}</span>
-                    </div>
-                  </td>
-                  <td className={CELL_CLASS}>
-                    <div className="flex items-center gap-2">
-                      <Image
-                        className="rounded-full w-5 h-5 sm:w-7 sm:h-7"
-                        src={getProjectImageSrc(lp.project)}
-                        alt={lp.project}
-                        width={24}
-                        height={24}
-                      />
-                      <span className="text-sm sm:text-base lg:text-lg">{lp.project}</span>
-                    </div>
-                  </td>
-                  <td className={CELL_CLASS}>{formatApr(lp.totalApr)}</td>
-                  <td className={CELL_CLASS}>{smartShortNumber(lp.tvl, 1, true, true)}</td>
-                  <td className={CELL_CLASS}>
-                    <button
-                      className="cta-button text-sm sm:text-base"
-                      onClick={e => {
-                        e.stopPropagation();
-                        handleSupply(lp);
-                      }}
+        <div className="relative">
+          <ScreenshotMenu highlightLabel="Highlight one pair" onScreenshot={handleScreenshot} onHighlight={() => setPromoMode(true)} />
+          <div className="overflow-x-auto lg:overflow-x-visible">
+            <table className="w-full text-left text-foreground min-w-[640px]">
+              <thead>
+                <tr className="text-muted-foreground">
+                  {COLUMNS.map(column => (
+                    <th
+                      key={column.key}
+                      className="min-w-[125px] p-2 sm:p-3 text-sm sm:text-base lg:text-xl cursor-pointer hover:text-primary transition whitespace-nowrap"
+                      onClick={() => handleSort(column.key)}
                     >
-                      Supply
-                    </button>
-                  </td>
+                      {column.label} {sortConfig.key === column.key && (sortConfig.direction === 'asc' ? '▲' : '▼')}
+                    </th>
+                  ))}
+                  <th className="p-2 sm:p-3" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {sortedLps.map(lp => (
+                  <tr
+                    key={getLpKey(lp)}
+                    className={`table-border hover:bg-muted/50 transition cursor-pointer ${promoMode ? '' : 'sm:cursor-default'}`}
+                    onClick={() => {
+                      if (promoMode) handlePromoClick(lp);
+                      else if (window.innerWidth < 640) handleSupply(lp);
+                    }}
+                  >
+                    <td className={CELL_CLASS}>
+                      <div className="flex items-center gap-2">
+                        <LpCoinIcons coins={lp.coins} />
+                        <span className="text-sm sm:text-base lg:text-lg" title={lp.name}>{lp.symbol}</span>
+                      </div>
+                    </td>
+                    <td className={CELL_CLASS}>
+                      <div className="flex items-center gap-2">
+                        <Image
+                          className="rounded-full w-5 h-5 sm:w-7 sm:h-7"
+                          src={getProjectImageSrc(lp.project)}
+                          alt={lp.project}
+                          width={24}
+                          height={24}
+                        />
+                        <span className="text-sm sm:text-base lg:text-lg">{lp.project}</span>
+                      </div>
+                    </td>
+                    <td className={CELL_CLASS}>{formatApr(lp.totalApr)}</td>
+                    <td className={CELL_CLASS}>{smartShortNumber(lp.tvl, 1, true, true)}</td>
+                    <td className={CELL_CLASS}>
+                      <button
+                        className="cta-button text-sm sm:text-base"
+                        onClick={e => {
+                          e.stopPropagation();
+                          if (promoMode) handlePromoClick(lp);
+                          else handleSupply(lp);
+                        }}
+                      >
+                        Supply
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
         <p className="text-muted-foreground text-xs sm:text-sm mt-2">
           Pools that include at least one stablecoin from the Stables list
@@ -299,6 +395,20 @@ export function LpsTable({
           )}
         </div>
       </div>
+
+      <ImagePreviewModal image={preview} onClose={() => setPreview(null)} />
+
+      {/* Off-screen screenshot template — rendered only during capture */}
+      {screenshot && (
+        <LpsScreenshotView
+          key={screenshotKey}
+          ref={screenshotRef}
+          rows={screenshot.rows}
+          sortConfig={sortConfig}
+          imageMap={screenshot.imageMap}
+          highlightedKey={screenshot.highlightedKey}
+        />
+      )}
     </div>
   );
 }
