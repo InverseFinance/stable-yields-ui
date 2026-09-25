@@ -12,7 +12,8 @@ import { type TokenPrices } from '@/lib/fetchTokenPrices';
 import { type LpData, type LpToken, type StakingData } from '@/app/types';
 import { commify, formatUsd } from '@/lib/utils';
 import { ManagePositionModal } from './ManagePositionModal';
-import { LpCoinIcons, LpInfoCard, lpTokenToStakingData } from './LpsTable';
+import { LpInfoCard, lpTokenToStakingData } from './LpsTable';
+import { LpCoinIcons } from './CoinIcons';
 
 export interface VaultPosition {
   stakingData: StakingData;

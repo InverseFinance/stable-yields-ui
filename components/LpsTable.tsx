@@ -5,13 +5,15 @@ import { flushSync } from 'react-dom';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { ExternalLink } from 'lucide-react';
-import { LpCoin, LpData, LpToken, StakingData } from '@/app/types';
+import { LpData, LpToken, StakingData } from '@/app/types';
 import { TokenPrices } from '@/lib/fetchTokenPrices';
 import { gaEvent } from '@/lib/analytics';
 import { smartShortNumber } from '@/lib/utils';
 import { captureAsPng, fetchAsDataUrl, fetchDataUrlMap } from '@/lib/screenshot';
 import type { PromoBullet } from '@/lib/generatePromoImage';
 import { getLpKey, getProjectImageSrc, LpsScreenshotView } from './ScreenshotView';
+import { InfoCard } from './InfoCard';
+import { LpCoinIcons } from './CoinIcons';
 import { GeneratedImage, HighlightModeHint, ImagePreviewModal, ScreenshotMenu } from './ScreenshotMenu';
 import { StakingCard } from './StakingCard';
 
@@ -71,64 +73,19 @@ export const lpTokenToStakingData = (lp: LpData, token: LpToken): StakingData =>
   zapDecimals: token.decimals,
 });
 
-function CoinIcon({ coin, sizeClassName }: { coin: LpCoin; sizeClassName: string }) {
-  const [hasError, setHasError] = useState(false);
-  const className = `rounded-full ${sizeClassName} ring-2 ring-card shrink-0`;
-
-  if (hasError) {
-    return (
-      <span className={`${className} bg-muted text-muted-foreground text-[10px] sm:text-xs flex items-center justify-center`}>
-        {coin.symbol.slice(0, 1)}
-      </span>
-    );
-  }
-  return (
-    <Image
-      className={className}
-      src={coin.image}
-      alt={coin.symbol}
-      width={32}
-      height={32}
-      onError={() => setHasError(true)}
-    />
-  );
-}
-
-// Overlapping icons of the pool's coins
-export function LpCoinIcons({ coins, sizeClassName = 'w-5 h-5 sm:w-7 sm:h-7' }: { coins: LpCoin[]; sizeClassName?: string }) {
-  return (
-    <div className="flex -space-x-2 shrink-0">
-      {coins.map(coin => <CoinIcon key={coin.address} coin={coin} sizeClassName={sizeClassName} />)}
-    </div>
-  );
-}
-
 // Takes the place of the zap card, in the same frame, for pools that can't be zapped into or managed here
 export function LpInfoCard({ lp, message }: { lp: LpData; message: string }) {
   return (
-    <div className="card-shine relative bg-container border border-white/[0.05] rounded-2xl">
-      <div className="relative flex justify-center border-b border-white/[0.05] py-3.5 text-sm font-medium tracking-wide text-foreground">
-        <span className="flex flex-row gap-1">
-          <span>Earn with</span>
-          <span className="font-bold">{lp.symbol}</span>
-          <Image src={getProjectImageSrc(lp.project)} alt={lp.project} width={20} height={20} />
-        </span>
-        <span className="absolute bottom-0 left-1/4 right-1/4 h-px bg-gradient-to-r from-transparent via-accent to-transparent" />
-      </div>
-      <div className="px-5 py-5 sm:px-6 sm:py-6 space-y-3">
-        <div className="bg-surface/50 border border-white/[0.04] rounded-xl p-4 space-y-2 text-sm">
-          <div className="flex justify-between">
-            <span className="text-text-muted">Total APR</span>
-            <span className="font-mono text-foreground">{formatApr(lp.totalApr)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-text-muted">TVL</span>
-            <span className="font-mono text-foreground">{smartShortNumber(lp.tvl, 1, true, true)}</span>
-          </div>
-        </div>
-        <p className="text-text-muted text-center text-xs sm:text-sm">{message}</p>
-      </div>
-    </div>
+    <InfoCard
+      title={<><span>Earn with</span><span className="font-bold">{lp.symbol}</span></>}
+      image={getProjectImageSrc(lp.project)}
+      imageAlt={lp.project}
+      stats={[
+        { label: 'Total APR', value: formatApr(lp.totalApr) },
+        { label: 'TVL', value: smartShortNumber(lp.tvl, 1, true, true) },
+      ]}
+      message={message}
+    />
   );
 }
 

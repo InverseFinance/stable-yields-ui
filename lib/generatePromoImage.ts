@@ -23,6 +23,8 @@ export interface PromoRowData {
   coinImageUrls?: string[];
   // name of the yield value, APY by default
   apyLabel?: string;
+  // name of the tvl value, TVL by default
+  tvlLabel?: string;
   // below the rank, "On stableyields.info" by default
   rankLabel?: string;
   // in place of the stablecoin bullets
@@ -430,7 +432,7 @@ export async function generatePromoImage(
   if (!hasHistory) {
     const topY = ry + (ROW_H - blockH) / 2;
     drawValue(apyLabel, apyValue, valueCX, topY);
-    drawValue('TVL', formatTvl(row.tvl), Math.round(RP_X + RP_W * 3 / 4), topY);
+    drawValue(row.tvlLabel || 'TVL', formatTvl(row.tvl), Math.round(RP_X + RP_W * 3 / 4), topY);
   } else {
     // Horizontal divider (between rows)
     ctx.beginPath();
@@ -467,7 +469,7 @@ export async function generatePromoImage(
     }
 
     // ── TVL row ────────────────────────────────────────────────────────────
-    drawValue('TVL', formatTvl(row.tvl), valueCX, ry + ROW_H + (ROW_H - blockH) / 2);
+    drawValue(row.tvlLabel || 'TVL', formatTvl(row.tvl), valueCX, ry + ROW_H + (ROW_H - blockH) / 2);
 
     ctx.fillStyle = MUTED; ctx.font = `bold 11px ${font}`;
     ctx.textAlign = 'left'; ctx.textBaseline = 'top';

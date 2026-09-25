@@ -56,6 +56,38 @@ export interface LpData {
     position?: LpToken;
 }
 
+export interface LeverageCollateral {
+    symbol: string;
+    // the token itself, or the coins of an LP
+    coins: LpCoin[];
+}
+
+export interface LeverageData {
+    // market identifier of the project, a controller address or a market id
+    id: string;
+    name: string;
+    project: string;
+    // version of the market, when the project has several of them for a same collateral
+    version?: number;
+    collateral: LeverageCollateral;
+    debt: LpCoin;
+    // set when the borrow rate is fixed instead of floating
+    fixedBorrowRate?: boolean;
+    // borrowable amount left in the market, in USD
+    liquidity: number;
+    // share of the supplied assets currently borrowed in %, unset for the CDP markets that have none
+    utilization?: number;
+    // highest leverage the market's max LTV allows
+    maxLeverage: number;
+    maxLtv: number;
+    // APY of the collateral in the main list
+    collateralApy: number;
+    borrowApy: number;
+    // net APY of a position at the max leverage
+    maxNetApy: number;
+    link: string;
+}
+
 export interface ChartData {
     symbol: string;
     project: string;

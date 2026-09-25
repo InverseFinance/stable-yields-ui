@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ChartData, LpData, StakingData } from "@/app/types";
+import { ChartData, LeverageData, LpData, StakingData } from "@/app/types";
 import FuturisticTable from "./ui/futuristic-table";
 import FuturisticChart from "./ui/futuristic-chart";
 import { TokenPrices } from "@/lib/fetchTokenPrices";
@@ -9,6 +9,7 @@ import { LanguageProvider } from "@/lib/useLanguage";
 import { gaEvent } from "@/lib/analytics";
 import { UserPositions } from "./UserPositions";
 import { LpsTable } from "./LpsTable";
+import { LeverageTable } from "./LeverageTable";
 
 const COLUMNS = [
     {
@@ -60,12 +61,14 @@ const COLUMNS = [
 const TABS = [
     { key: 'stables', label: 'Stables' },
     { key: 'stable-pairs', label: 'Stable Pairs' },
+    { key: 'leverage', label: 'Leverage' },
 ] as const;
 
 type TabKey = typeof TABS[number]['key'];
 
 // stable default, the positions reload when the LPs change
 const NO_LPS: LpData[] = [];
+const NO_LEVERAGE: LeverageData[] = [];
 
 const TabEmptyState = ({ text }: { text: string }) => (
     <div className="bg-container rounded-2xl p-10 sm:p-16 text-center text-muted-foreground text-sm sm:text-base">
@@ -77,6 +80,7 @@ export const YieldTable = ({
     data,
     chartData,
     lps = NO_LPS,
+    leverage = NO_LEVERAGE,
     timestamp,
     usTreasuryYield,
     tokenPrices,
@@ -84,6 +88,7 @@ export const YieldTable = ({
     data: StakingData[];
     chartData: ChartData[];
     lps?: LpData[];
+    leverage?: LeverageData[];
     timestamp: number;
     usTreasuryYield: number;
     tokenPrices: TokenPrices
@@ -141,6 +146,11 @@ export const YieldTable = ({
                         {lps.length > 0
                             ? <LpsTable lps={lps} tokenPrices={tokenPrices} onDepositSuccess={() => setPositionsRefreshKey(k => k + 1)} />
                             : <TabEmptyState text="No stable pairs available right now" />}
+                    </div>
+                    <div id="yields-panel-leverage" role="tabpanel" aria-labelledby="yields-tab-leverage" hidden={activeTab !== 'leverage'}>
+                        {leverage.length > 0
+                            ? <LeverageTable markets={leverage} />
+                            : <TabEmptyState text="No leverage opportunities available right now" />}
                     </div>
                 </div>
             </div>

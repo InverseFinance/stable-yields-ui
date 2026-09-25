@@ -1,6 +1,6 @@
 "use client"
 import { CSSProperties, forwardRef, ReactNode } from 'react';
-import { LpData } from '@/app/types';
+import { LeverageData, LpCoin, LpData } from '@/app/types';
 import { smartShortNumber } from '@/lib/utils';
 
 export const PROJECT_IMAGES: Record<string, string> = {
@@ -47,10 +47,12 @@ const getHighlightedCellStyle = (isFirst: boolean, isLast: boolean): CSSProperti
   ...(isLast  ? { borderRight: `2px solid ${HL_COLOR}`, borderRadius: '0 8px 8px 0' } : {}),
 });
 
-const HeaderCells = ({ columns, sortConfig }: { columns: { key: string; label: string }[]; sortConfig: SortConfig }) => (
+const HEADER_CLASS = 'min-w-[125px] p-2 sm:p-3 text-sm sm:text-base lg:text-xl whitespace-nowrap';
+
+const HeaderCells = ({ columns, sortConfig, className = HEADER_CLASS }: { columns: { key: string; label: string }[]; sortConfig: SortConfig; className?: string }) => (
   <tr className="text-muted-foreground">
     {columns.map(col => (
-      <th key={col.key} className="min-w-[125px] p-2 sm:p-3 text-sm sm:text-base lg:text-xl whitespace-nowrap">
+      <th key={col.key} className={className}>
         {col.label}{' '}
         {sortConfig.key === col.key && (sortConfig.direction === 'asc' ? '▲' : '▼')}
       </th>
@@ -237,6 +239,15 @@ function renderLpCell(lp: LpData, key: string, imageMap: Record<string, string>)
   return lp.totalApr ? `${lp.totalApr.toFixed(2)}%` : '-';
 }
 
+const TabHeader = ({ label }: { label: string }) => (
+  <div className="mx-3 mb-4 flex border-b border-border">
+    <span className="relative px-4 py-2.5 text-lg font-semibold text-foreground">
+      {label}
+      <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-accent" />
+    </span>
+  </div>
+);
+
 export const LpsScreenshotView = forwardRef<HTMLDivElement, {
   rows: LpData[];
   sortConfig: SortConfig;
@@ -245,12 +256,7 @@ export const LpsScreenshotView = forwardRef<HTMLDivElement, {
 }>(({ rows, sortConfig, imageMap, highlightedKey }, ref) => (
   <ScreenshotFrame ref={ref}>
     {/* Active tab — mirrors the tabs above the tables */}
-    <div className="mx-3 mb-4 flex border-b border-border">
-      <span className="relative px-4 py-2.5 text-lg font-semibold text-foreground">
-        Stable Pairs
-        <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-accent" />
-      </span>
-    </div>
+    <TabHeader label="Stable Pairs" />
     {/* Table card — mirrors LpsTable */}
     <div className="mx-3 bg-container rounded-2xl p-2 sm:p-4 shadow-xl">
       <table className="w-full text-left text-foreground" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
@@ -281,3 +287,119 @@ export const LpsScreenshotView = forwardRef<HTMLDivElement, {
 ));
 
 LpsScreenshotView.displayName = 'LpsScreenshotView';
+
+// one step smaller than the other tables, like in LeverageTable
+const LEVERAGE_CELL_CLASS = 'p-2 text-primary-foreground text-base font-bold whitespace-nowrap';
+const LEVERAGE_HEADER_CLASS = 'align-bottom p-2 text-base whitespace-nowrap';
+
+const LEVERAGE_COLUMNS = [
+  { key: 'collateral', label: 'Collateral' },
+  { key: 'project', label: 'Project' },
+  { key: 'debt', label: 'Debt' },
+  { key: 'liquidity', label: 'Liquidity' },
+  { key: 'utilization', label: 'Utilisation' },
+  { key: 'maxNetApy', label: 'Max Net APY' },
+];
+
+const ScreenshotPill = ({ children, tone = 'border-border bg-muted/40' }: { children: ReactNode; tone?: string }) => (
+  <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-normal text-muted-foreground whitespace-nowrap ${tone}`}>
+    {children}
+  </span>
+);
+
+const ScreenshotTokenCell = ({ coins, symbol, pills, imageMap }: { coins: LpCoin[]; symbol: string; pills: ReactNode; imageMap: Record<string, string> }) => (
+  <div className="flex items-center gap-2">
+    <div className="flex -space-x-2 shrink-0">
+      {coins.map(coin => (
+        <ScreenshotIcon key={`${coin.address}-${coin.symbol}`} src={coin.image} label={coin.symbol} imageMap={imageMap} className="ring-2 ring-card" />
+      ))}
+    </div>
+    <div className="flex flex-col items-start gap-1">
+      <span>{symbol}</span>
+      <span className="flex items-center gap-1">{pills}</span>
+    </div>
+  </div>
+);
+
+const formatLeveragePercent = (value: number) => value ? `${value.toFixed(2)}%` : '-';
+
+function renderLeverageCell(market: LeverageData, key: string, imageMap: Record<string, string>) {
+  if (key === 'collateral') {
+    return (
+      <ScreenshotTokenCell
+        coins={market.collateral.coins}
+        symbol={market.collateral.symbol}
+        imageMap={imageMap}
+        pills={<ScreenshotPill tone="border-success/30 bg-success/10">{formatLeveragePercent(market.collateralApy)} APY</ScreenshotPill>}
+      />
+    );
+  }
+  if (key === 'project') {
+    return (
+      <ScreenshotTokenCell
+        coins={[{ address: market.project, symbol: market.project, image: getProjectImageSrc(market.project) }]}
+        symbol={market.project}
+        imageMap={imageMap}
+        pills={market.version ? <ScreenshotPill>V{market.version}</ScreenshotPill> : null}
+      />
+    );
+  }
+  if (key === 'debt') {
+    return (
+      <ScreenshotTokenCell
+        coins={[market.debt]}
+        symbol={market.debt.symbol}
+        imageMap={imageMap}
+        pills={(
+          <ScreenshotPill tone="border-accent/30 bg-accent/10">
+            {formatLeveragePercent(market.borrowApy)}{market.fixedBorrowRate ? ' fixed' : ''} APY
+          </ScreenshotPill>
+        )}
+      />
+    );
+  }
+  if (key === 'liquidity') return smartShortNumber(market.liquidity, 1, true, true);
+  if (key === 'utilization') return market.utilization === undefined ? '-' : formatLeveragePercent(market.utilization);
+  return (
+    <div className="flex flex-col items-start gap-1">
+      <span className={market.maxNetApy > 0 ? 'text-success' : ''}>{formatLeveragePercent(market.maxNetApy)}</span>
+      <ScreenshotPill>at {market.maxLeverage.toFixed(1)}x</ScreenshotPill>
+    </div>
+  );
+}
+
+export const LeverageScreenshotView = forwardRef<HTMLDivElement, {
+  rows: LeverageData[];
+  sortConfig: SortConfig;
+  imageMap: Record<string, string>;
+  highlightedId?: string;
+}>(({ rows, sortConfig, imageMap, highlightedId }, ref) => (
+  <ScreenshotFrame ref={ref}>
+    <TabHeader label="Leverage" />
+    {/* Table card — mirrors LeverageTable */}
+    <div className="mx-3 bg-container rounded-2xl p-2 sm:p-4 shadow-xl">
+      <table className="w-full text-left text-foreground" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
+        <thead>
+          <HeaderCells columns={LEVERAGE_COLUMNS} sortConfig={sortConfig} className={LEVERAGE_HEADER_CLASS} />
+        </thead>
+        <tbody>
+          {rows.map(market => (
+            <tr key={market.id} className="table-border">
+              {LEVERAGE_COLUMNS.map((col, colIdx) => (
+                <td
+                  key={col.key}
+                  className={LEVERAGE_CELL_CLASS}
+                  style={market.id === highlightedId ? getHighlightedCellStyle(colIdx === 0, colIdx === LEVERAGE_COLUMNS.length - 1) : undefined}
+                >
+                  {renderLeverageCell(market, col.key, imageMap)}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </ScreenshotFrame>
+));
+
+LeverageScreenshotView.displayName = 'LeverageScreenshotView';
