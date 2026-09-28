@@ -9,10 +9,17 @@ import { ExternalLink } from 'lucide-react';
 import { fetchEnsoBalances } from '@/lib/enso';
 import { wagmiConfig } from '@/lib/wagmi';
 import { type TokenPrices } from '@/lib/fetchTokenPrices';
-import { type LpData, type LpToken, type StakingData } from '@/app/types';
+import { type LeverageData, type LpData, type LpToken, type StakingData } from '@/app/types';
 import { commify, formatUsd } from '@/lib/utils';
+import { fetchLeveragePositions, type LeveragePosition } from '@/lib/leverage-positions';
+import { atBorrowApy } from '@/lib/leverage-position-math';
+import { useFirmBorrowApy } from '@/lib/useFirmBorrowApy';
 import { ManagePositionModal } from './ManagePositionModal';
-import { LpCoinIcons, LpInfoCard, lpTokenToStakingData } from './LpsTable';
+import { LpInfoCard, lpTokenToStakingData } from './LpsTable';
+import { LpCoinIcons } from './CoinIcons';
+import { InfoCard } from './InfoCard';
+import { getProjectImageSrc } from './ScreenshotView';
+import { formatPoints, PointsPill } from './PointsPill';
 
 export interface VaultPosition {
   stakingData: StakingData;
@@ -24,6 +31,8 @@ export interface VaultPosition {
   amountWei: bigint;
   // set for LP positions
   lp?: LpData;
+  // set for leveraged positions, which are held in a lending market
+  leverage?: LeveragePosition;
   // market price to check swap output worth against, when the valuation price can differ from it
   marketPrice?: number;
 }
@@ -31,7 +40,52 @@ export interface VaultPosition {
 type LpWithPosition = LpData & { position: LpToken };
 
 // LP positions are only routable by Enso when the project supports its zap (not for staked Convex positions)
-const isManageable = (pos: VaultPosition) => !pos.lp || !!pos.lp.zap;
+const isManageable = (pos: VaultPosition) => !pos.leverage && (!pos.lp || !!pos.lp.zap);
+
+// dust isn't worth a row
+const MIN_POSITION_USD = 1;
+
+// a month being 365/12 days, a twelfth of the yearly yield
+const toMonthly = (yearly: number) => yearly / 12;
+
+// the popup has the room to show amounts in full, the rows keep the shortened ones
+const formatFullUsd = (value: number) => `$${commify(value)}`;
+
+const formatLeverage = (leverage: number) => `${leverage.toFixed(2)}x`;
+// FiRM lends at a rate its borrower fixed when buying DBR, which the market's current one only approximates
+const isFirm = (position: LeveragePosition) => position.market.project === 'FiRM';
+
+const getPositionPoints = (position: LeveragePosition) =>
+  position.market.pointsMultiplier ? position.market.pointsMultiplier * position.leverage : 0;
+const formatApy = (apy: number) => `${apy.toFixed(2)}%`;
+
+// A leveraged position is worth its equity, and earns the net APY on it
+const toVaultPosition = (position: LeveragePosition): VaultPosition => ({
+  stakingData: {
+    symbol: position.market.collateral.symbol,
+    project: position.market.project,
+    apy: position.netApy,
+    avg30: 0,
+    avg60: 0,
+    avg90: 0,
+    tvl: position.market.liquidity,
+    link: position.market.link,
+    image: getProjectImageSrc(position.market.project),
+    vaultPrice: 0,
+    totalAssets: 0,
+    totalAssets30d: 0,
+    totalAssets90d: 0,
+    decimals: 18,
+    zapDecimals: 18,
+  },
+  balance: position.deposits,
+  usdValue: position.equity,
+  estimatedYearlyYield: position.equity * position.netApy / 100,
+  tokenAddress: position.market.id as `0x${string}`,
+  decimals: 18,
+  amountWei: BigInt(0),
+  leverage: position,
+});
 
 async function fetchLpPositions(account: `0x${string}`, lps: LpWithPosition[]): Promise<VaultPosition[]> {
   if (!lps.length) return [];
@@ -68,15 +122,20 @@ async function fetchLpPositions(account: `0x${string}`, lps: LpWithPosition[]): 
 export function UserPositions({
   data,
   lps,
+  leverage,
   tokenPrices,
   refreshKey,
 }: {
   data: StakingData[];
   lps: LpData[];
+  leverage: LeverageData[];
   tokenPrices: TokenPrices;
   refreshKey?: number;
 }) {
   const { address, isConnected } = useAccount();
+  const [firmBorrowApy, setFirmBorrowApy] = useFirmBorrowApy();
+  // what the rate input holds while being typed
+  const [borrowApyDraft, setBorrowApyDraft] = useState<string>();
   const [positions, setPositions] = useState<VaultPosition[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isInited, setIsInited] = useState(false);
@@ -93,10 +152,14 @@ export function UserPositions({
     setIsLoading(true);
     try {
       const lpsWithPosition = lps.filter((lp): lp is LpWithPosition => !!lp.position);
-      const [balances, lpPositions] = await Promise.all([
+      const [balances, lpPositions, leveragePositions] = await Promise.all([
         fetchEnsoBalances(addr),
         fetchLpPositions(addr, lpsWithPosition).catch(err => {
           console.error('Failed to fetch LP positions:', err);
+          return [];
+        }),
+        fetchLeveragePositions(addr, leverage).catch(err => {
+          console.error('Failed to fetch leveraged positions:', err);
           return [];
         }),
       ]);
@@ -126,14 +189,16 @@ export function UserPositions({
         });
       }
 
-      setPositions([...found, ...lpPositions].sort((a, b) => b.usdValue - a.usdValue));
+      setPositions([...found, ...lpPositions, ...leveragePositions.map(toVaultPosition)]
+        .filter(position => position.usdValue >= MIN_POSITION_USD)
+        .sort((a, b) => b.usdValue - a.usdValue));
     } catch (err) {
       console.error('Failed to fetch positions:', err);
     } finally {
       setIsLoading(false);
       setIsInited(true);
     }
-  }, [data, lps]);
+  }, [data, lps, leverage]);
 
   useEffect(() => {
     if (address) loadPositions(address);
@@ -149,26 +214,46 @@ export function UserPositions({
     return () => window.removeEventListener('keydown', handleEscKey);
   }, [infoPosition]);
 
-  const totalYearlyUsd = positions.reduce((prev, curr) => prev+curr.estimatedYearlyYield, 0);
+  // always recomputed, so dropping the user's rate puts a position back on the market's right away
+  const withUserRate = useCallback((position: LeveragePosition) => (
+    isFirm(position) ? atBorrowApy(position, firmBorrowApy || position.market.borrowApy) : position
+  ), [firmBorrowApy]);
 
-  if (!isConnected || (isLoading && !isInited) || (!isLoading && positions.length === 0)) return null;
+  const shownPositions = useMemo(() => positions.map(position => {
+    if (!position.leverage) return position;
+    const leverage = withUserRate(position.leverage);
+    if (leverage === position.leverage) return position;
+    return {
+      ...position,
+      leverage,
+      stakingData: { ...position.stakingData, apy: leverage.netApy },
+      estimatedYearlyYield: leverage.equity * leverage.netApy / 100,
+    };
+  }), [positions, withUserRate]);
+
+  const totalYearlyUsd = shownPositions.reduce((prev, curr) => prev+curr.estimatedYearlyYield, 0);
+  const infoLeverage = infoPosition?.leverage && withUserRate(infoPosition.leverage);
+  const infoProject = infoLeverage?.market.project || infoPosition?.lp?.project || '';
+  const infoLink = infoLeverage?.market.link || infoPosition?.lp?.link || '';
+
+  if (!isConnected || (isLoading && !isInited) || (!isLoading && shownPositions.length === 0)) return null;
 
   return (
     <>
       <div className="w-full">
-        <h2 className="text-lg font-semibold text-foreground mb-3">Your Positions <b className="text-success">(+{formatUsd(totalYearlyUsd)} yearly)</b></h2>
+        <h2 className="text-lg font-semibold text-foreground mb-3">Your Positions <b className="text-success">(+{formatUsd(toMonthly(totalYearlyUsd))} monthly)</b></h2>
         {isLoading ? (
           <div className="text-muted-foreground text-sm">Loading positions…</div>
         ) : (
           <div className="flex flex-col gap-2">
-            {positions.map(pos => (
+            {shownPositions.map(pos => (
               <div
                 key={pos.tokenAddress}
                 className="flex items-center justify-between bg-container border border-white/[0.05] rounded-xl px-4 py-3 gap-4"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  {pos.lp ? (
-                    <LpCoinIcons coins={pos.lp.coins} sizeClassName="w-8 h-8" />
+                  {pos.lp || pos.leverage ? (
+                    <LpCoinIcons coins={pos.lp?.coins || pos.leverage!.market.collateral.coins} sizeClassName="w-8 h-8" />
                   ) : (
                     <Image
                       src={pos.stakingData.image}
@@ -187,26 +272,51 @@ export function UserPositions({
                       </span>
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      {pos.balance < 1 ? '<1' : commify(pos.balance)} tokens
+                      {pos.leverage
+                        ? `${formatUsd(pos.leverage.deposits)} deposits · ${formatUsd(pos.leverage.debt)} debt`
+                        : `${pos.balance < 1 ? '<1' : commify(pos.balance)} tokens`}
                     </div>
                     {/* Mobile-only USD row */}
                     <div className="text-xs text-muted-foreground sm:hidden mt-0.5">
-                      {formatUsd(pos.usdValue)} · <span className="text-green-400">+{formatUsd(pos.estimatedYearlyYield)}/yr</span>
+                      {formatUsd(pos.usdValue)} · <span className="text-green-400">+{formatUsd(toMonthly(pos.estimatedYearlyYield))}/mo</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-6 shrink-0 pr-6">
+                  {!!pos.leverage && !!getPositionPoints(pos.leverage) && (
+                    <div className="text-right hidden sm:block">
+                      <div className="flex justify-end">
+                        <PointsPill
+                          multiplier={getPositionPoints(pos.leverage)}
+                          tooltip={`${formatPoints(getPositionPoints(pos.leverage))} Ethena sats on your equity, from ${formatPoints(pos.leverage.market.pointsMultiplier!)} per dollar deposited at ${formatLeverage(pos.leverage.leverage)}`}
+                        />
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-0.5">Ethena sats</div>
+                    </div>
+                  )}
+                  {pos.leverage && (
+                    <div className="text-right hidden sm:block">
+                      <div className="text-sm font-semibold text-foreground">{formatLeverage(pos.leverage.leverage)}</div>
+                      <div className="text-xs text-muted-foreground">Est. leverage</div>
+                    </div>
+                  )}
                   <div className="text-right hidden sm:block">
                     <div className="text-sm font-semibold text-foreground">{formatUsd(pos.usdValue)}</div>
-                    <div className="text-xs text-muted-foreground">Value</div>
+                    <div className="text-xs text-muted-foreground">{pos.leverage ? 'Equity' : 'Value'}</div>
                   </div>
                   <div className="text-right hidden sm:block">
-                    <div className="text-sm font-semibold text-green-400">+{formatUsd(pos.estimatedYearlyYield)}/yr</div>
-                    <div className="text-xs text-muted-foreground">{pos.stakingData.apy.toFixed(2)}% APY</div>
+                    <div className="text-sm font-semibold text-green-400">+{formatUsd(toMonthly(pos.estimatedYearlyYield))}/mo</div>
+                    <div className="text-xs text-muted-foreground">
+                      {pos.stakingData.apy.toFixed(2)}% {pos.leverage ? 'Net Equity APY' : 'APY'}
+                    </div>
                   </div>
                   <button
-                    onClick={() => isManageable(pos) ? setManagingPosition(pos) : setInfoPosition(pos)}
+                    onClick={() => {
+                      setBorrowApyDraft(undefined);
+                      if (isManageable(pos)) setManagingPosition(pos);
+                      else setInfoPosition(pos);
+                    }}
                     className="cta-button text-sm font-bold"
                   >
                     Manage
@@ -221,7 +331,7 @@ export function UserPositions({
       {managingPosition && address && (
         <ManagePositionModal
           position={managingPosition}
-          allPositions={positions.filter(isManageable)}
+          allPositions={shownPositions.filter(isManageable)}
           yieldData={destinations}
           tokenPrices={tokenPrices}
           address={address}
@@ -233,7 +343,7 @@ export function UserPositions({
         />
       )}
 
-      {infoPosition?.lp && (
+      {infoPosition && (infoPosition.lp || infoLeverage) && (
         <div
           className="fixed inset-0 bg-background/50 backdrop-blur-sm flex items-end sm:items-center justify-center z-50"
           onClick={() => setInfoPosition(null)}
@@ -242,10 +352,65 @@ export function UserPositions({
             className="bg-container p-4 sm:p-6 rounded-t-2xl sm:rounded-xl shadow-xl w-full sm:w-xl sm:max-w-lg max-h-[90vh] overflow-y-auto"
             onClick={e => e.stopPropagation()}
           >
-            <LpInfoCard
-              lp={infoPosition.lp}
-              message={`Managing ${infoPosition.lp.project} positions isn't available here, withdraw or claim your rewards on ${infoPosition.lp.project}.`}
-            />
+            {infoLeverage ? (
+              <InfoCard
+                title={<><span className="font-bold">{infoLeverage.market.collateral.symbol}</span><span>loop on</span></>}
+                image={getProjectImageSrc(infoProject)}
+                imageAlt={infoProject}
+                stats={[
+                  { label: 'Deposits', value: formatFullUsd(infoLeverage.deposits) },
+                  { label: `${infoLeverage.market.debt.symbol} debt`, value: formatFullUsd(infoLeverage.debt) },
+                  { label: 'Equity', value: formatFullUsd(infoLeverage.equity) },
+                  { label: 'Est. leverage', value: formatLeverage(infoLeverage.leverage) },
+                  { label: `${infoLeverage.market.collateral.symbol} APY`, value: formatApy(infoLeverage.market.collateralApy) },
+                  {
+                    label: `${infoLeverage.market.debt.symbol} borrow APY`,
+                    // a FiRM borrower fixed their own rate when buying DBR, so they set it here
+                    value: isFirm(infoLeverage) ? (
+                      <span className="inline-flex items-center gap-2">
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          max="100"
+                          aria-label={`Your fixed ${infoLeverage.market.debt.symbol} borrow APY`}
+                          value={borrowApyDraft ?? infoLeverage.borrowApy.toFixed(2)}
+                          onChange={event => {
+                            const text = event.target.value;
+                            setBorrowApyDraft(text);
+                            const rate = Number(text);
+                            setFirmBorrowApy(text !== '' && Number.isFinite(rate) && rate > 0 ? rate : undefined);
+                          }}
+                          className="w-20 rounded border border-border bg-surface/50 px-1.5 py-0.5 text-right font-mono text-foreground focus:border-accent focus:outline-none"
+                        />
+                        <span>% fixed</span>
+                        {!!firmBorrowApy && (
+                          <button
+                            onClick={() => { setFirmBorrowApy(undefined); setBorrowApyDraft(undefined); }}
+                            className="cursor-pointer text-xs text-muted-foreground underline hover:text-foreground"
+                          >
+                            market rate
+                          </button>
+                        )}
+                      </span>
+                    ) : `${formatApy(infoLeverage.borrowApy)}${infoLeverage.market.fixedBorrowRate ? ' fixed' : ''}`,
+                  },
+                  { label: 'Net equity APY', value: formatApy(infoLeverage.netApy) },
+                  ...(getPositionPoints(infoLeverage) ? [{
+                    label: 'Ethena sats',
+                    value: `${formatPoints(getPositionPoints(infoLeverage))} (${formatPoints(infoLeverage.market.pointsMultiplier!)} per dollar deposited)`,
+                  }] : []),
+                ]}
+                message={isFirm(infoLeverage)
+                  ? `Set the fixed rate you locked in with DBR, it is kept for your FiRM positions. Adding to, repaying or closing this position happens on ${infoProject}.`
+                  : `Adding to, repaying or closing this position happens on ${infoProject}.`}
+              />
+            ) : (
+              <LpInfoCard
+                lp={infoPosition.lp!}
+                message={`Managing ${infoProject} positions isn't available here, withdraw or claim your rewards on ${infoProject}.`}
+              />
+            )}
             <div className="flex gap-4 justify-end pt-3">
               <button
                 onClick={() => setInfoPosition(null)}
@@ -254,17 +419,18 @@ export function UserPositions({
                 Cancel
               </button>
               <a
-                href={infoPosition.lp.link}
+                href={infoLink}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="cta-button inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 text-sm sm:text-base text-foreground"
               >
-                View on {infoPosition.lp.project} <ExternalLink className="w-3.5 h-3.5" />
+                View on {infoProject} <ExternalLink className="w-3.5 h-3.5" />
               </a>
             </div>
           </div>
         </div>
       )}
+
     </>
   );
 }

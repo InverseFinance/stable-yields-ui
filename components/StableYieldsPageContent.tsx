@@ -6,6 +6,9 @@ import { fetchConvexLps } from "@/lib/convex-lps";
 import { fetchStakeDaoLps } from "@/lib/stakedao-lps";
 import { fetchYearnLps } from "@/lib/yearn-lps";
 import { fetchUsTreasuryYield } from "@/lib/treasury";
+import { fetchLlamalendMarkets } from "@/lib/llamalend";
+import { fetchMorphoMarkets } from "@/lib/morpho";
+import { fetchFirmMarkets } from "@/lib/firm";
 
 export async function StableYieldsPageContent({ title, titleSize = 'text-5xl sm:text-8xl lg:text-8xl' }: { title: string, titleSize?: string }) {
   // doesn't reject, and isn't needed by the other requests, so it runs alongside all of them
@@ -18,7 +21,7 @@ export async function StableYieldsPageContent({ title, titleSize = 'text-5xl sm:
   const tokenPrices = tokenPricesRes.status === 'fulfilled' ? tokenPricesRes.value : {};
 
   const rates = json.rates.filter((r: StakingData) => !['sDAI'].includes(r.symbol));
-  const [chartResults, curveLps, convexLps, stakeDaoLps, yearnLps, usTreasuryYield] = await Promise.all([
+  const [chartResults, curveLps, convexLps, stakeDaoLps, yearnLps, llamalendMarkets, morphoMarkets, firmMarkets, usTreasuryYield] = await Promise.all([
     Promise.allSettled(rates.map(async (r: StakingData) => {
       if (!r.pool) return [];
       const data = await fetch(`https://yields.llama.fi/chart/${r.pool}`);
@@ -29,6 +32,9 @@ export async function StableYieldsPageContent({ title, titleSize = 'text-5xl sm:
     fetchConvexLps(rates),
     fetchStakeDaoLps(rates),
     fetchYearnLps(rates),
+    fetchLlamalendMarkets(rates),
+    fetchMorphoMarkets(rates),
+    fetchFirmMarkets(rates),
     usTreasuryYieldPromise,
   ]);
 
@@ -71,6 +77,7 @@ export async function StableYieldsPageContent({ title, titleSize = 'text-5xl sm:
           usTreasuryYield={usTreasuryYield}
           chartData={chartData}
           lps={[...curveLps, ...convexLps, ...stakeDaoLps, ...yearnLps]}
+          leverage={[...llamalendMarkets, ...morphoMarkets, ...firmMarkets]}
           data={rates.map((r: StakingData, index: number) => ({
             ...r,
             project: r.project.replace('FiRM', 'Inverse').replace(/fx-protocol/, '(fx) Protocol'),
