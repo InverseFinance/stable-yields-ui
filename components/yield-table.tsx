@@ -104,7 +104,7 @@ export const YieldTable = ({
     return (
         <LanguageProvider>
             <div className="flex flex-col gap-8 w-full px-3 sm:px-0">
-                <UserPositions data={data} lps={lps} tokenPrices={tokenPrices} refreshKey={positionsRefreshKey} />
+                <UserPositions data={data} lps={lps} leverage={leverage} tokenPrices={tokenPrices} refreshKey={positionsRefreshKey} />
                 <div className="flex flex-col gap-4">
                     <div role="tablist" aria-label="Yield categories" className="flex gap-1 border-b border-border">
                         {TABS.map(tab => {

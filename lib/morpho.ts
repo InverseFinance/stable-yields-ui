@@ -1,8 +1,10 @@
 import { LeverageData, StakingData } from '@/app/types';
 import { getCollateralRates, getMaxLeverage, getNetApy, isWorthLeveraging, MIN_MARKET_ASSETS_USD } from '@/lib/leverage';
+import { getEthenaMultiplier } from '@/lib/ethena-points';
 import { fetchJson, getMainListCoins, toLpCoins } from '@/lib/lps';
 
 const MORPHO_MARKETS_API = 'https://app.morpho.org/api/markets';
+const MORPHO_BLUE = '0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb';
 // the dollar stablecoins we take as debt, Morpho markets borrow all sorts of assets
 const DEBT_ADDRESSES = new Set([
   '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', // USDC
@@ -14,6 +16,8 @@ const DEBT_ADDRESSES = new Set([
 interface MorphoApiAsset {
   address: string;
   symbol: string;
+  decimals: number;
+  priceUsd: number | null;
 }
 
 interface MorphoApiMarket {
@@ -69,9 +73,19 @@ export async function fetchMorphoMarkets(rates: StakingData[]): Promise<Leverage
         maxLeverage,
         maxLtv: market.lltv * 100,
         collateralApy,
+        pointsMultiplier: getEthenaMultiplier('Morpho', [collateralAsset.symbol]),
         borrowApy,
         maxNetApy: getNetApy(collateralApy, borrowApy, maxLeverage),
         link: getMorphoMarketUrl(market.uniqueKey),
+        positionSource: {
+          kind: 'morpho',
+          contract: MORPHO_BLUE as `0x${string}`,
+          marketId: market.uniqueKey as `0x${string}`,
+          collateralDecimals: collateralAsset.decimals,
+          debtDecimals: loanAsset.decimals,
+          collateralPrice: collateralAsset.priceUsd || undefined,
+          collateralVaultPrice: rate.vaultPrice,
+        },
       };
       return isWorthLeveraging(leverageMarket) ? [leverageMarket] : [];
     });

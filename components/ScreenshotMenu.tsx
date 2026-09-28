@@ -90,12 +90,14 @@ export function ImagePreviewModal({ image, onClose }: { image: GeneratedImage | 
       onClick={onClose}
     >
       <div
-        className="bg-container rounded-xl shadow-2xl overflow-hidden max-w-4xl w-full"
+        className="bg-container rounded-xl shadow-2xl overflow-hidden max-w-4xl w-full max-h-[90vh] flex flex-col"
         onClick={e => e.stopPropagation()}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={image.dataUrl} alt="Promo preview" className="w-full" />
-        <div className="flex gap-3 justify-end p-3 border-t border-border">
+        <div className="overflow-y-auto">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={image.dataUrl} alt="Promo preview" className="w-full" />
+        </div>
+        <div className="flex gap-3 justify-end p-3 border-t border-border shrink-0">
           <button
             onClick={onClose}
             className="cursor-pointer px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition"

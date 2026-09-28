@@ -1,6 +1,7 @@
 import { isAddress } from 'viem';
 import { LeverageData, StakingData } from '@/app/types';
 import { getCollateralRates, getNetApy, isWorthLeveraging, MIN_MARKET_ASSETS_USD } from '@/lib/leverage';
+import { getEthenaMultiplier } from '@/lib/ethena-points';
 import { fetchJson, getMainListCoins, toLpCoins } from '@/lib/lps';
 
 const LENDING_MARKETS_API = 'https://prices.curve.finance/v1/lending/markets';
@@ -16,7 +17,9 @@ interface LlamalendApiMarket {
   max_ltv: number;
   // highest leverage the max LTV allows
   leverage: number;
-  collateral_token: { symbol: string; address: string };
+  collateral_token: { symbol: string; address: string; decimals: number };
+  // collateral price in the borrowed token
+  price_oracle: number;
   borrowed_token: { symbol: string; address: string };
 }
 
@@ -59,9 +62,18 @@ export async function fetchLlamalendMarkets(rates: StakingData[]): Promise<Lever
         maxLeverage,
         maxLtv: market.max_ltv,
         collateralApy,
+        pointsMultiplier: getEthenaMultiplier('Llamalend', [market.collateral_token.symbol]),
         borrowApy,
         maxNetApy: getNetApy(collateralApy, borrowApy, maxLeverage),
         link: getLlamalendMarketUrl(market.controller),
+        positionSource: {
+          kind: 'llamalend',
+          contract: market.controller as `0x${string}`,
+          collateralDecimals: market.collateral_token.decimals || 18,
+          debtDecimals: 18,
+          collateralPrice: market.price_oracle,
+          collateralVaultPrice: rate.vaultPrice,
+        },
       };
       return isWorthLeveraging(leverageMarket) ? [leverageMarket] : [];
     });

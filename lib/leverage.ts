@@ -1,5 +1,7 @@
 import { LeverageData, StakingData } from '@/app/types';
 
+export const ETHENA_ICON = 'https://assets.coingecko.com/coins/images/36530/standard/ethena.png?1711701436';
+
 export const MIN_MARKET_ASSETS_USD = 100_000;
 // under that, the market isn't made for looping the collateral
 export const MIN_LEVERAGE = 5;

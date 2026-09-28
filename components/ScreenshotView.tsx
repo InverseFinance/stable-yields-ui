@@ -2,6 +2,7 @@
 import { CSSProperties, forwardRef, ReactNode } from 'react';
 import { LeverageData, LpCoin, LpData } from '@/app/types';
 import { smartShortNumber } from '@/lib/utils';
+import { ETHENA_ICON } from '@/lib/leverage';
 
 export const PROJECT_IMAGES: Record<string, string> = {
   'Frax': 'https://icons.llamao.fi/icons/protocols/frax?w=48&h=48',
@@ -201,17 +202,17 @@ const LP_COLUMNS = [
 export const getLpKey = (lp: LpData) => `${lp.project}-${lp.address}`;
 
 // Icon from its preloaded data URL, or the label's first letter when it couldn't be loaded
-function ScreenshotIcon({ src, label, imageMap, className = '' }: { src: string; label: string; imageMap: Record<string, string>; className?: string }) {
+function ScreenshotIcon({ src, label, imageMap, className = '', sizeClassName = 'w-7 h-7' }: { src: string; label: string; imageMap: Record<string, string>; className?: string; sizeClassName?: string }) {
   const dataUrl = imageMap[src];
   if (!dataUrl) {
     return (
-      <span className={`rounded-full w-7 h-7 shrink-0 bg-muted text-muted-foreground text-xs flex items-center justify-center ${className}`}>
+      <span className={`rounded-full ${sizeClassName} shrink-0 bg-muted text-muted-foreground text-xs flex items-center justify-center ${className}`}>
         {label.slice(0, 1)}
       </span>
     );
   }
   // eslint-disable-next-line @next/next/no-img-element
-  return <img className={`rounded-full w-7 h-7 shrink-0 object-cover ${className}`} src={dataUrl} alt={label} width={28} height={28} />;
+  return <img className={`rounded-full ${sizeClassName} shrink-0 object-cover ${className}`} src={dataUrl} alt={label} width={28} height={28} />;
 }
 
 function renderLpCell(lp: LpData, key: string, imageMap: Record<string, string>) {
@@ -302,26 +303,43 @@ const LEVERAGE_COLUMNS = [
 ];
 
 const ScreenshotPill = ({ children, tone = 'border-border bg-muted/40' }: { children: ReactNode; tone?: string }) => (
-  <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-normal text-muted-foreground whitespace-nowrap ${tone}`}>
+  <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-normal text-muted-foreground whitespace-nowrap ${tone}`}>
     {children}
   </span>
 );
 
 const ScreenshotTokenCell = ({ coins, symbol, pills, imageMap }: { coins: LpCoin[]; symbol: string; pills: ReactNode; imageMap: Record<string, string> }) => (
-  <div className="flex items-center gap-2">
-    <div className="flex -space-x-2 shrink-0">
-      {coins.map(coin => (
-        <ScreenshotIcon key={`${coin.address}-${coin.symbol}`} src={coin.image} label={coin.symbol} imageMap={imageMap} className="ring-2 ring-card" />
-      ))}
-    </div>
-    <div className="flex flex-col items-start gap-1">
+  <div className="flex flex-col items-start gap-1">
+    <span className="flex items-center gap-2">
+      <span className="flex justify-center w-7 shrink-0">
+        <span className="flex -space-x-2">
+          {coins.map(coin => (
+            <ScreenshotIcon
+              key={`${coin.address}-${coin.symbol}`}
+              src={coin.image}
+              label={coin.symbol}
+              imageMap={imageMap}
+              sizeClassName={coins.length > 1 ? 'w-[18px] h-[18px]' : 'w-7 h-7'}
+              className="ring-2 ring-card"
+            />
+          ))}
+        </span>
+      </span>
       <span>{symbol}</span>
-      <span className="flex items-center gap-1">{pills}</span>
-    </div>
+    </span>
+    {pills ? <span className="flex items-center gap-1">{pills}</span> : null}
   </div>
 );
 
 const formatLeveragePercent = (value: number) => value ? `${value.toFixed(2)}%` : '-';
+const formatSats = (multiplier: number) => `${Math.round(multiplier).toLocaleString('en-US')}x`;
+
+const ScreenshotPointsPill = ({ multiplier, imageMap }: { multiplier: number; imageMap: Record<string, string> }) => (
+  <ScreenshotPill>
+    <ScreenshotIcon src={ETHENA_ICON} label="Ethena" imageMap={imageMap} sizeClassName="w-3 h-3" />
+    {formatSats(multiplier)}
+  </ScreenshotPill>
+);
 
 function renderLeverageCell(market: LeverageData, key: string, imageMap: Record<string, string>) {
   if (key === 'collateral') {
@@ -330,7 +348,12 @@ function renderLeverageCell(market: LeverageData, key: string, imageMap: Record<
         coins={market.collateral.coins}
         symbol={market.collateral.symbol}
         imageMap={imageMap}
-        pills={<ScreenshotPill tone="border-success/30 bg-success/10">{formatLeveragePercent(market.collateralApy)} APY</ScreenshotPill>}
+        pills={(
+          <>
+            <ScreenshotPill tone="border-success/30 bg-success/10">{formatLeveragePercent(market.collateralApy)} APY</ScreenshotPill>
+            {!!market.pointsMultiplier && <ScreenshotPointsPill multiplier={market.pointsMultiplier} imageMap={imageMap} />}
+          </>
+        )}
       />
     );
   }
@@ -340,7 +363,7 @@ function renderLeverageCell(market: LeverageData, key: string, imageMap: Record<
         coins={[{ address: market.project, symbol: market.project, image: getProjectImageSrc(market.project) }]}
         symbol={market.project}
         imageMap={imageMap}
-        pills={market.version ? <ScreenshotPill>V{market.version}</ScreenshotPill> : null}
+        pills={null}
       />
     );
   }
@@ -363,7 +386,10 @@ function renderLeverageCell(market: LeverageData, key: string, imageMap: Record<
   return (
     <div className="flex flex-col items-start gap-1">
       <span className={market.maxNetApy > 0 ? 'text-success' : ''}>{formatLeveragePercent(market.maxNetApy)}</span>
-      <ScreenshotPill>at {market.maxLeverage.toFixed(1)}x</ScreenshotPill>
+      <span className="flex items-center gap-1">
+        <ScreenshotPill>at {market.maxLeverage.toFixed(1)}x</ScreenshotPill>
+        {!!market.pointsMultiplier && <ScreenshotPointsPill multiplier={market.pointsMultiplier * market.maxLeverage} imageMap={imageMap} />}
+      </span>
     </div>
   );
 }

@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "refresh-ethena-points": "node scripts/refresh-ethena-points.mjs"
   },
   "dependencies": {
     "@ensofinance/sdk": "^2.3.1",

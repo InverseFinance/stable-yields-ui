@@ -8,11 +8,14 @@ import { LeverageData, LpCoin } from '@/app/types';
 import { gaEvent } from '@/lib/analytics';
 import { smartShortNumber } from '@/lib/utils';
 import { captureAsPng, fetchAsDataUrl, fetchDataUrlMap } from '@/lib/screenshot';
+import { ETHENA_ICON } from '@/lib/leverage';
 import type { PromoBullet } from '@/lib/generatePromoImage';
 import { getProjectImageSrc, LeverageScreenshotView } from './ScreenshotView';
 import { GeneratedImage, HighlightModeHint, ImagePreviewModal, ScreenshotMenu } from './ScreenshotMenu';
 import { LpCoinIcons } from './CoinIcons';
 import { InfoCard } from './InfoCard';
+import { Tooltip } from './Tooltip';
+import { formatPoints, PointsPill } from './PointsPill';
 
 // one step smaller than the other tables, this one has more columns to fit
 const CELL_CLASS = 'min-w-[80px] p-2 text-primary-foreground text-sm sm:text-base font-bold whitespace-nowrap';
@@ -38,13 +41,20 @@ const Pill = ({ children, title, tone = 'border-border bg-muted/40 text-muted-fo
 const EARNED_TONE = 'border-success/30 bg-success/10 text-muted-foreground';
 const PAID_TONE = 'border-accent/30 bg-accent/10 text-muted-foreground';
 
+// an LP's coins take the width of a single icon, so the symbols line up across rows
+const CoinIconGroup = ({ coins }: { coins: LpCoin[] }) => (
+  <span className="flex justify-center w-5 sm:w-7 shrink-0">
+    <LpCoinIcons coins={coins} sizeClassName={coins.length > 1 ? 'w-3.5 h-3.5 sm:w-[18px] sm:h-[18px]' : 'w-5 h-5 sm:w-7 sm:h-7'} />
+  </span>
+);
+
 const TokenCell = ({ coins, symbol, pills }: { coins: LpCoin[]; symbol: string; pills: ReactNode }) => (
-  <div className="flex items-center gap-2">
-    <LpCoinIcons coins={coins} />
-    <div className="flex flex-col items-start gap-1">
+  <div className="flex flex-col items-start gap-1">
+    <span className="flex items-center gap-2">
+      <CoinIconGroup coins={coins} />
       <span className="text-sm sm:text-base">{symbol}</span>
-      <span className="flex items-center gap-1">{pills}</span>
-    </div>
+    </span>
+    {pills ? <span className="flex items-center gap-1">{pills}</span> : null}
   </div>
 );
 
@@ -52,7 +62,10 @@ const TokenCell = ({ coins, symbol, pills }: { coins: LpCoin[]; symbol: string; 
 const getPromoBullets = (market: LeverageData): PromoBullet[] => [
   { icon: 'layers', text: `${market.collateral.symbol} earns ${formatPercent(market.collateralApy)} APY` },
   { icon: 'zap', text: `Borrow ${market.debt.symbol} at ${formatBorrowApy(market)}` },
-  { icon: 'recycle', text: `Loop up to ${formatLeverage(market.maxLeverage)}, the max its ${market.maxLtv.toFixed(1)}% LTV allows` },
+  { icon: 'recycle', text: `Loop up to ${formatLeverage(market.maxLeverage)}` },
+  ...(market.pointsMultiplier
+    ? [{ icon: 'layers' as const, text: `${formatPoints(market.pointsMultiplier)} Ethena sats, ${formatPoints(market.pointsMultiplier * market.maxLeverage)} at max leverage` }]
+    : []),
 ];
 
 interface Column {
@@ -74,7 +87,17 @@ const COLUMNS: Column[] = [
       <TokenCell
         coins={market.collateral.coins}
         symbol={market.collateral.symbol}
-        pills={<Pill tone={EARNED_TONE}>{formatPercent(market.collateralApy)} APY</Pill>}
+        pills={(
+          <>
+            <Pill tone={EARNED_TONE}>{formatPercent(market.collateralApy)} APY</Pill>
+            {!!market.pointsMultiplier && (
+              <PointsPill
+                multiplier={market.pointsMultiplier}
+                tooltip={`${formatPoints(market.pointsMultiplier)} Ethena sats per dollar of ${market.collateral.symbol}`}
+              />
+            )}
+          </>
+        )}
       />
     ),
   },
@@ -82,14 +105,16 @@ const COLUMNS: Column[] = [
     key: 'project',
     label: 'Project',
     title: 'Lending market the position is opened on',
-    value: market => `${market.project}${market.version || ''}`,
+    value: market => market.project,
     render: market => (
-      <TokenCell
-        coins={[{ address: market.project, symbol: market.project, image: getProjectImageSrc(market.project) }]}
-        symbol={market.project}
-        // markets of a same collateral are told apart by their version, like on Curve
-        pills={market.version ? <Pill title={market.name}>V{market.version}</Pill> : null}
-      />
+      // the market name tells the versions of a same project apart
+      <Tooltip content={`${market.name} market`}>
+        <TokenCell
+          coins={[{ address: market.project, symbol: market.project, image: getProjectImageSrc(market.project) }]}
+          symbol={market.project}
+          pills={null}
+        />
+      </Tooltip>
     ),
   },
   {
@@ -127,7 +152,17 @@ const COLUMNS: Column[] = [
     render: market => (
       <div className="flex flex-col items-start gap-1">
         <span className={market.maxNetApy > 0 ? 'text-success' : ''}>{formatPercent(market.maxNetApy)}</span>
-        <Pill title={`Max LTV ${market.maxLtv.toFixed(1)}%`}>at {formatLeverage(market.maxLeverage)}</Pill>
+        <span className="flex items-center gap-1">
+          <Tooltip content={`The ${market.maxLtv.toFixed(1)}% max LTV of the market allows ${formatLeverage(market.maxLeverage)}`}>
+            <Pill>at {formatLeverage(market.maxLeverage)}</Pill>
+          </Tooltip>
+          {!!market.pointsMultiplier && (
+            <PointsPill
+              multiplier={market.pointsMultiplier * market.maxLeverage}
+              tooltip={`${formatPoints(market.pointsMultiplier * market.maxLeverage)} Ethena sats at ${formatLeverage(market.maxLeverage)} leverage, from ${formatPoints(market.pointsMultiplier)} per dollar`}
+            />
+          )}
+        </span>
       </div>
     ),
   },
@@ -186,6 +221,7 @@ export function LeverageTable({ markets }: { markets: LeverageData[] }) {
       ...market.collateral.coins.map(coin => coin.image),
       market.debt.image,
       getProjectImageSrc(market.project),
+      ...(market.pointsMultiplier ? [ETHENA_ICON] : []),
     ]));
 
     flushSync(() => {
@@ -218,7 +254,7 @@ export function LeverageTable({ markets }: { markets: LeverageData[] }) {
     ]);
     const rank = [...markets].sort((a, b) => b.maxNetApy - a.maxNetApy).indexOf(market) + 1;
     const dataUrl = await generatePromoImage(tableDataUrl, {
-      symbol: market.collateral.symbol,
+      symbol: `${market.collateral.symbol} loop`,
       project: market.project,
       projectLabel: market.project,
       apy: market.maxNetApy,

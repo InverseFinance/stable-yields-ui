@@ -62,6 +62,23 @@ export interface LeverageCollateral {
     coins: LpCoin[];
 }
 
+export interface LeveragePositionSource {
+    // shape of the calls reading a user position
+    kind: 'firm' | 'llamalend' | 'morpho';
+    // FiRM market, Llamalend controller, or the Morpho Blue singleton
+    contract: `0x${string}`;
+    // Morpho market id
+    marketId?: `0x${string}`;
+    collateralDecimals: number;
+    debtDecimals: number;
+    // USD price of one collateral token, unset when the contract reports a USD value
+    collateralPrice?: number;
+    // price of the collateral in the Stables list, preferred so a position matches the rest of the app
+    collateralVaultPrice?: number;
+    // price the market itself puts on the collateral, to turn a USD value back into an amount
+    oraclePrice?: number;
+}
+
 export interface LeverageData {
     // market identifier of the project, a controller address or a market id
     id: string;
@@ -82,10 +99,13 @@ export interface LeverageData {
     maxLtv: number;
     // APY of the collateral in the main list
     collateralApy: number;
+    // Ethena sats per dollar of collateral, when it earns some
+    pointsMultiplier?: number;
     borrowApy: number;
     // net APY of a position at the max leverage
     maxNetApy: number;
     link: string;
+    positionSource?: LeveragePositionSource;
 }
 
 export interface ChartData {
