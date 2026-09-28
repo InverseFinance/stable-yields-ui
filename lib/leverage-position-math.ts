@@ -19,6 +19,8 @@ export interface LeveragePosition {
   deposits: number;
   // debt in USD, a debt token counting as a dollar
   debt: number;
+  // rate paid on the debt, the market's own unless the borrower set theirs
+  borrowApy: number;
   equity: number;
   // how much the deposits are worth per dollar of equity
   leverage: number;
@@ -75,6 +77,9 @@ export function readPosition(market: LeverageData, results: CallResult[]): { dep
   };
 }
 
+const getPositionNetApy = (collateralApy: number, deposits: number, borrowApy: number, debt: number, equity: number) =>
+  equity > 0 ? (collateralApy * deposits - borrowApy * debt) / equity : 0;
+
 // What the position is worth to its holder: the equity, the leverage on it, and the APY it nets
 export function toLeveragePosition(market: LeverageData, deposits: number, debt: number): LeveragePosition | undefined {
   if (deposits < MIN_POSITION_USD) return undefined;
@@ -83,8 +88,16 @@ export function toLeveragePosition(market: LeverageData, deposits: number, debt:
     market,
     deposits,
     debt,
+    borrowApy: market.borrowApy,
     equity,
     leverage: equity > 0 ? deposits / equity : 0,
-    netApy: equity > 0 ? (market.collateralApy * deposits - market.borrowApy * debt) / equity : 0,
+    netApy: getPositionNetApy(market.collateralApy, deposits, market.borrowApy, debt, equity),
   };
 }
+
+// The same position at another borrow rate, for a borrower whose fixed rate isn't the market's
+export const atBorrowApy = (position: LeveragePosition, borrowApy: number): LeveragePosition => ({
+  ...position,
+  borrowApy,
+  netApy: getPositionNetApy(position.market.collateralApy, position.deposits, borrowApy, position.debt, position.equity),
+});

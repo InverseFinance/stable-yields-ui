@@ -12,6 +12,8 @@ import { type TokenPrices } from '@/lib/fetchTokenPrices';
 import { type LeverageData, type LpData, type LpToken, type StakingData } from '@/app/types';
 import { commify, formatUsd } from '@/lib/utils';
 import { fetchLeveragePositions, type LeveragePosition } from '@/lib/leverage-positions';
+import { atBorrowApy } from '@/lib/leverage-position-math';
+import { useFirmBorrowApy } from '@/lib/useFirmBorrowApy';
 import { ManagePositionModal } from './ManagePositionModal';
 import { LpInfoCard, lpTokenToStakingData } from './LpsTable';
 import { LpCoinIcons } from './CoinIcons';
@@ -50,6 +52,9 @@ const toMonthly = (yearly: number) => yearly / 12;
 const formatFullUsd = (value: number) => `$${commify(value)}`;
 
 const formatLeverage = (leverage: number) => `${leverage.toFixed(2)}x`;
+// FiRM lends at a rate its borrower fixed when buying DBR, which the market's current one only approximates
+const isFirm = (position: LeveragePosition) => position.market.project === 'FiRM';
+
 const getPositionPoints = (position: LeveragePosition) =>
   position.market.pointsMultiplier ? position.market.pointsMultiplier * position.leverage : 0;
 const formatApy = (apy: number) => `${apy.toFixed(2)}%`;
@@ -128,6 +133,9 @@ export function UserPositions({
   refreshKey?: number;
 }) {
   const { address, isConnected } = useAccount();
+  const [firmBorrowApy, setFirmBorrowApy] = useFirmBorrowApy();
+  // what the rate input holds while being typed
+  const [borrowApyDraft, setBorrowApyDraft] = useState<string>();
   const [positions, setPositions] = useState<VaultPosition[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isInited, setIsInited] = useState(false);
@@ -206,12 +214,29 @@ export function UserPositions({
     return () => window.removeEventListener('keydown', handleEscKey);
   }, [infoPosition]);
 
-  const totalYearlyUsd = positions.reduce((prev, curr) => prev+curr.estimatedYearlyYield, 0);
-  const infoLeverage = infoPosition?.leverage;
+  // always recomputed, so dropping the user's rate puts a position back on the market's right away
+  const withUserRate = useCallback((position: LeveragePosition) => (
+    isFirm(position) ? atBorrowApy(position, firmBorrowApy || position.market.borrowApy) : position
+  ), [firmBorrowApy]);
+
+  const shownPositions = useMemo(() => positions.map(position => {
+    if (!position.leverage) return position;
+    const leverage = withUserRate(position.leverage);
+    if (leverage === position.leverage) return position;
+    return {
+      ...position,
+      leverage,
+      stakingData: { ...position.stakingData, apy: leverage.netApy },
+      estimatedYearlyYield: leverage.equity * leverage.netApy / 100,
+    };
+  }), [positions, withUserRate]);
+
+  const totalYearlyUsd = shownPositions.reduce((prev, curr) => prev+curr.estimatedYearlyYield, 0);
+  const infoLeverage = infoPosition?.leverage && withUserRate(infoPosition.leverage);
   const infoProject = infoLeverage?.market.project || infoPosition?.lp?.project || '';
   const infoLink = infoLeverage?.market.link || infoPosition?.lp?.link || '';
 
-  if (!isConnected || (isLoading && !isInited) || (!isLoading && positions.length === 0)) return null;
+  if (!isConnected || (isLoading && !isInited) || (!isLoading && shownPositions.length === 0)) return null;
 
   return (
     <>
@@ -221,7 +246,7 @@ export function UserPositions({
           <div className="text-muted-foreground text-sm">Loading positions…</div>
         ) : (
           <div className="flex flex-col gap-2">
-            {positions.map(pos => (
+            {shownPositions.map(pos => (
               <div
                 key={pos.tokenAddress}
                 className="flex items-center justify-between bg-container border border-white/[0.05] rounded-xl px-4 py-3 gap-4"
@@ -287,7 +312,11 @@ export function UserPositions({
                     </div>
                   </div>
                   <button
-                    onClick={() => isManageable(pos) ? setManagingPosition(pos) : setInfoPosition(pos)}
+                    onClick={() => {
+                      setBorrowApyDraft(undefined);
+                      if (isManageable(pos)) setManagingPosition(pos);
+                      else setInfoPosition(pos);
+                    }}
                     className="cta-button text-sm font-bold"
                   >
                     Manage
@@ -302,7 +331,7 @@ export function UserPositions({
       {managingPosition && address && (
         <ManagePositionModal
           position={managingPosition}
-          allPositions={positions.filter(isManageable)}
+          allPositions={shownPositions.filter(isManageable)}
           yieldData={destinations}
           tokenPrices={tokenPrices}
           address={address}
@@ -336,7 +365,35 @@ export function UserPositions({
                   { label: `${infoLeverage.market.collateral.symbol} APY`, value: formatApy(infoLeverage.market.collateralApy) },
                   {
                     label: `${infoLeverage.market.debt.symbol} borrow APY`,
-                    value: `${formatApy(infoLeverage.market.borrowApy)}${infoLeverage.market.fixedBorrowRate ? ' fixed' : ''}`,
+                    // a FiRM borrower fixed their own rate when buying DBR, so they set it here
+                    value: isFirm(infoLeverage) ? (
+                      <span className="inline-flex items-center gap-2">
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          max="100"
+                          aria-label={`Your fixed ${infoLeverage.market.debt.symbol} borrow APY`}
+                          value={borrowApyDraft ?? infoLeverage.borrowApy.toFixed(2)}
+                          onChange={event => {
+                            const text = event.target.value;
+                            setBorrowApyDraft(text);
+                            const rate = Number(text);
+                            setFirmBorrowApy(text !== '' && Number.isFinite(rate) && rate > 0 ? rate : undefined);
+                          }}
+                          className="w-20 rounded border border-border bg-surface/50 px-1.5 py-0.5 text-right font-mono text-foreground focus:border-accent focus:outline-none"
+                        />
+                        <span>% fixed</span>
+                        {!!firmBorrowApy && (
+                          <button
+                            onClick={() => { setFirmBorrowApy(undefined); setBorrowApyDraft(undefined); }}
+                            className="cursor-pointer text-xs text-muted-foreground underline hover:text-foreground"
+                          >
+                            market rate
+                          </button>
+                        )}
+                      </span>
+                    ) : `${formatApy(infoLeverage.borrowApy)}${infoLeverage.market.fixedBorrowRate ? ' fixed' : ''}`,
                   },
                   { label: 'Net equity APY', value: formatApy(infoLeverage.netApy) },
                   ...(getPositionPoints(infoLeverage) ? [{
@@ -344,7 +401,9 @@ export function UserPositions({
                     value: `${formatPoints(getPositionPoints(infoLeverage))} (${formatPoints(infoLeverage.market.pointsMultiplier!)} per dollar deposited)`,
                   }] : []),
                 ]}
-                message={`Adding to, repaying or closing this position happens on ${infoProject}.`}
+                message={isFirm(infoLeverage)
+                  ? `Set the fixed rate you locked in with DBR, it is kept for your FiRM positions. Adding to, repaying or closing this position happens on ${infoProject}.`
+                  : `Adding to, repaying or closing this position happens on ${infoProject}.`}
               />
             ) : (
               <LpInfoCard
