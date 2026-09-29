@@ -1,4 +1,4 @@
-import { YieldTable } from "@/components/yield-table";
+import { YieldTable, type TabKey } from "@/components/yield-table";
 import { StakingData } from "@/app/types";
 import { fetchTokenPrices } from "@/lib/fetchTokenPrices";
 import { fetchCurveLps } from "@/lib/curve-lps";
@@ -10,7 +10,7 @@ import { fetchLlamalendMarkets } from "@/lib/llamalend";
 import { fetchMorphoMarkets } from "@/lib/morpho";
 import { fetchFirmMarkets } from "@/lib/firm";
 
-export async function StableYieldsPageContent({ title, titleSize = 'text-5xl sm:text-8xl lg:text-8xl' }: { title: string, titleSize?: string }) {
+export async function StableYieldsPageContent({ title, titleSize = 'text-5xl sm:text-8xl lg:text-8xl', tab = 'stables' }: { title: string, titleSize?: string, tab?: TabKey }) {
   // doesn't reject, and isn't needed by the other requests, so it runs alongside all of them
   const usTreasuryYieldPromise = fetchUsTreasuryYield();
   const [stablesRes, tokenPricesRes] = await Promise.allSettled([
@@ -73,6 +73,7 @@ export async function StableYieldsPageContent({ title, titleSize = 'text-5xl sm:
       </header>
       <div className="flex flex-col gap-4 w-full items-center justify-center">
         <YieldTable
+          initialTab={tab}
           tokenPrices={tokenPrices}
           usTreasuryYield={usTreasuryYield}
           chartData={chartData}

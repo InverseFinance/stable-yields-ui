@@ -59,12 +59,17 @@ const COLUMNS = [
 ]
 
 const TABS = [
-    { key: 'stables', label: 'Stables' },
-    { key: 'stable-pairs', label: 'Stable Pairs' },
-    { key: 'leverage', label: 'Leverage' },
+    { key: 'stables', label: 'Stables', path: '/' },
+    { key: 'stable-pairs', label: 'Stable Pairs', path: '/pairs' },
+    { key: 'leverage', label: 'Leverage', path: '/leverage' },
 ] as const;
 
-type TabKey = typeof TABS[number]['key'];
+export type TabKey = typeof TABS[number]['key'];
+
+const pathOfTab = (tab: TabKey) => TABS.find(t => t.key === tab)!.path;
+
+// the pages a tab owns, the other ones showing the same tables keep their own url
+const isTabPath = (pathname: string) => TABS.some(tab => tab.path === (pathname.replace(/(.)\/$/, '$1') || '/'));
 
 // stable default, the positions reload when the LPs change
 const NO_LPS: LpData[] = [];
@@ -84,6 +89,7 @@ export const YieldTable = ({
     timestamp,
     usTreasuryYield,
     tokenPrices,
+    initialTab = 'stables',
 }: {
     data: StakingData[];
     chartData: ChartData[];
@@ -92,13 +98,19 @@ export const YieldTable = ({
     timestamp: number;
     usTreasuryYield: number;
     tokenPrices: TokenPrices
+    // tab the page it is rendered on points to
+    initialTab?: TabKey;
 }) => {
     const [positionsRefreshKey, setPositionsRefreshKey] = useState(0);
-    const [activeTab, setActiveTab] = useState<TabKey>('stables');
+    const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
 
     const handleTabChange = (tab: TabKey) => {
         gaEvent({ action: 'yields_tab_switch', params: { category: 'yields', label: tab, value: 0 } });
         setActiveTab(tab);
+        // the url follows the tab so it can be shared, replaced rather than navigated to keep the loaded data
+        if (isTabPath(window.location.pathname)) {
+            window.history.replaceState(null, '', `${pathOfTab(tab)}${window.location.search}${window.location.hash}`);
+        }
     };
 
     return (
