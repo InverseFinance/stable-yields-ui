@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChartData, LeverageData, LpData, StakingData } from "@/app/types";
 import FuturisticTable from "./ui/futuristic-table";
@@ -10,6 +10,7 @@ import { gaEvent } from "@/lib/analytics";
 import { UserPositions } from "./UserPositions";
 import { LpsTable } from "./LpsTable";
 import { LeverageTable } from "./LeverageTable";
+import { hasRoomToBorrow } from "@/lib/leverage";
 
 const COLUMNS = [
     {
@@ -102,6 +103,8 @@ export const YieldTable = ({
     initialTab?: TabKey;
 }) => {
     const [positionsRefreshKey, setPositionsRefreshKey] = useState(0);
+    // only the markets with room left to borrow are an opportunity, the positions still cover the full ones
+    const openableLeverage = useMemo(() => leverage.filter(hasRoomToBorrow), [leverage]);
     const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
 
     const handleTabChange = (tab: TabKey) => {
@@ -160,8 +163,8 @@ export const YieldTable = ({
                             : <TabEmptyState text="No stable pairs available right now" />}
                     </div>
                     <div id="yields-panel-leverage" role="tabpanel" aria-labelledby="yields-tab-leverage" hidden={activeTab !== 'leverage'}>
-                        {leverage.length > 0
-                            ? <LeverageTable markets={leverage} />
+                        {openableLeverage.length > 0
+                            ? <LeverageTable markets={openableLeverage} />
                             : <TabEmptyState text="No leverage opportunities available right now" />}
                     </div>
                 </div>
