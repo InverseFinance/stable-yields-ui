@@ -186,6 +186,8 @@ const PROJECT_ALIASES: Record<string, string> = {
 
 // Sats per dollar of collateral, undefined when the collateral earns none
 export function getEthenaMultiplier(project: string, coinSymbols: string[]): number | undefined {
+  // ethena program ending
+  return 0;
   const coinsKey = coinSymbols.map(symbol => symbol.toLowerCase()).sort().join('+');
   const projectKey = project.toLowerCase();
   return MARKET_MULTIPLIERS[`${PROJECT_ALIASES[projectKey] || projectKey}:${coinsKey}`]
