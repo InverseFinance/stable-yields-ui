@@ -25,12 +25,13 @@ const rewardPoolAbi = parseAbi([
 const stashTokenWrapperAbi = parseAbi(['function token() view returns (address)']);
 
 interface ConvexApiPool {
+  // `${chain}-${lowercase pool address}`, also the pool's key in the APYs API
+  id: string;
   name: string;
   lpTokenAddress: string;
   // virtual price of the Curve pool, 18 decimals
   virtualPrice: string;
   usdTotal: number;
-  baseApy?: number;
   isBroken?: boolean;
   coins: { symbol: string; address: string }[];
   convexPoolData: {
@@ -40,6 +41,12 @@ interface ConvexApiPool {
     // amount staked on Convex
     usdTotal: number;
   };
+}
+
+interface ConvexApiApys {
+  // base Curve vAPR, in %
+  baseApy?: number;
+  crvPrice?: number;
 }
 
 interface RewardStream {
@@ -104,10 +111,11 @@ async function fetchLlamaPrices(addresses: string[]): Promise<Record<string, num
   return Object.fromEntries(Object.entries(coins).map(([key, { price }]) => [key.split(':')[1].toLowerCase(), price]));
 }
 
-// the Convex UI values CRV rewards with the CRV price of its APYs API
-async function fetchConvexCrvPrice(): Promise<number | undefined> {
-  const { apys } = await fetchJson<{ apys: Record<string, { crvPrice?: number }> }>(CONVEX_APYS_API);
-  return Object.values(apys).find(a => a.crvPrice)?.crvPrice;
+// the Convex UI takes the base Curve vAPR of each pool and the CRV price it values CRV rewards with
+// from its APYs API, keyed by lowercase pool id
+async function fetchConvexApys(): Promise<Record<string, ConvexApiApys>> {
+  const { apys } = await fetchJson<{ apys: Record<string, ConvexApiApys> }>(CONVEX_APYS_API);
+  return Object.fromEntries(Object.entries(apys).map(([id, a]) => [id.toLowerCase(), a]));
 }
 
 // Current reward APRs as shown by the Convex UI: CRV, CVX minted with it and extra rewards,
@@ -141,10 +149,12 @@ async function fetchRewardAprs(pools: ConvexApiPool[], convexCrvPrice?: number):
 export async function fetchConvexLps(rates: StakingData[]): Promise<LpData[]> {
   try {
     const mainListCoins = getMainListCoins(rates);
-    const [{ pools }, convexCrvPrice] = await Promise.all([
+    // the pools API has no base vAPR, so the APYs API is required: without it every APR would be understated
+    const [{ pools }, apys] = await Promise.all([
       fetchJson<{ pools: ConvexApiPool[] }>(CONVEX_POOLS_API),
-      fetchConvexCrvPrice().catch(() => undefined),
+      fetchConvexApys(),
     ]);
+    const convexCrvPrice = Object.values(apys).find(a => a.crvPrice)?.crvPrice;
     const matchingPools = pools.filter(p =>
       !p.convexPoolData.shutdown
       && !p.isBroken
@@ -161,7 +171,7 @@ export async function fetchConvexLps(rates: StakingData[]): Promise<LpData[]> {
     return matchingPools.map((p, i) => {
       const coins = toLpCoins(p.coins, mainListCoins);
       const symbol = coins.map(c => c.symbol).join('/');
-      const totalApr = (p.baseApy || 0) + rewardAprs[i];
+      const totalApr = (apys[p.id.toLowerCase()]?.baseApy || 0) + rewardAprs[i];
       return {
         address: p.lpTokenAddress as `0x${string}`,
         name: p.name,
