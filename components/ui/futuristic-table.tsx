@@ -24,6 +24,7 @@ const projectImages = {
   'Spark': 'https://icons.llamao.fi/icons/protocols/spark?w=48&h=48',
   'Fluid': 'https://icons.llamao.fi/icons/protocols/fluid?w=48&h=48',
   'Sky': 'https://coin-images.coingecko.com/coins/images/39925/large/sky.jpg?1724827980',
+  'Swan': 'https://icons.llamao.fi/icons/protocols/swan-dao?w=48&h=48',
 } as const;
 
 interface TableData {
